@@ -1,0 +1,265 @@
+<?php
+header("Access-Control-Allow-Origin: * ");
+header("Content-Type: application/json");
+header("Access-Control-Allow-Methods: OPTIONS, POST, GET, DELETE");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method === 'OPTIONS') {
+  http_response_code(200);//ответ на пробный запрос
+  return;
+} elseif ($method === 'POST') {
+  include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';
+
+  $result = ['error' => false, 'code' => 200, 'message' => 'Record changed'];//Создание массива с ответом Ок
+
+  //{"productId": 1, "quantity": 2}
+  //Обработка входных данных
+  $postData = file_get_contents('php://input');//получение запроса
+  $postDataJson = json_decode($postData, true);//парсинг параметров запроса
+  settype($postDataJson['productId'], 'integer');//защита от инъекции
+  $postProductId = $postDataJson['productId'];
+  settype($postDataJson['quantity'], 'integer');//защита от инъекции
+  $postQuantity = $postDataJson['quantity'];
+  if ($postProductId<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (productId) not recognized!'; goto endRequest;}
+  if ($postQuantity<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (quantity) not recognized!'; goto endRequest;}
+
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
+
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {
+    goto endRequest;//Если пришла ошибка - завршаем скрипт
+  } else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+  //Получение корзины пользователя
+  $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
+  try{
+  $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
+  }
+  $numRows = mysqli_num_rows($sqlResult);
+
+  $userCartItems=NULL;
+  $userCartCreatedAt = NULL;
+  $userCartUpdatedAt = NULL;
+  $userCart = ['user_id' => $userId, 'items' => [], 'createdAt' => null, 'updatedAt' => null];
+  $row = mysqli_fetch_array($sqlResult);//парсинг 
+  
+  if ($numRows === 1){
+    $userCartCreatedAt = $row['createdAt'];
+    $userCartUpdatedAt = $row['updatedAt'];
+    if (!empty($row['items'])){
+      $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
+    }else{$userCartItems = [];}
+
+        
+    if (count($userCartItems)>0) {
+      //Если в корзине уже есть элементы, ищем соответствие
+      $userCartUpdatedAt = time();
+      $findRecordFlag=false;
+      foreach($userCartItems as &$value){
+        if ($value['productId'] == $postProductId){
+          $value['quantity'] = $postQuantity;
+          $findRecordFlag=true;
+          break;
+        }
+      }
+      if (!$findRecordFlag){
+        array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
+      }
+    }else {
+      $userCartUpdatedAt = NULL;
+      $userCartCreatedAt = time();
+      array_push($userCartItems,['productId ' => $postProductId,'quantity ' => $postQuantity]);
+    }
+    
+  }elseif ($numRows === 0){
+    $result = createUserCart($link, $result, $newUserId);//Создание записи в таблице корзин, если такой не было
+    if ($result['error']){goto endRequest;}
+    $userCartCreatedAt = time();
+  }else{
+    $result['error']=true; $result['code'] = 500; $result['message'] = 'Error! Multiple records were found in the database! (CartEdit)'; goto endRequest;
+  }
+
+  $result = updateUserCart($link, $result, $userId, $userCartItems, $userCartCreatedAt, $userCartUpdatedAt);
+  $userCartItemsSQL = json_encode($userCartItems);
+
+$result = compileUserCart($link,$result,$userCartItems, $userId );
+
+} elseif ($method === 'GET') {
+  include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
+  include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';
+  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!'];//Создание массива с ответом Ок
+  $priorityMsg = null; //Добавочное сообщение на случай не критической ошибка. Добавляется к ответу вместо message в конце успешной обработки соответств. запроса
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
+  
+  if ($db_connect_response['error'] == true || !$link) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
+  }
+ /* Out {
+    "items": [
+        {
+            "product": {
+                "id": "6660c46d5bd7273d906cdcc2",
+                "name": "Анакампсерос руфесценс Санрайз",
+                "url": "anakampseros_rufestsens_sanraiz",
+                "image": "1-1.jpg",
+                "price": 15
+            },
+            "quantity": 2
+        },
+        {
+            "product": {
+                "id": "6660c46d5bd7273d906cdcbf",
+                "name": "Цветущие маммилярии",
+                "url": "tsvetushchie_mammilyarii",
+                "image": "0-1.jpg",
+                "price": 17
+            },
+            "quantity": 3
+        },
+        {
+            "product": {
+                "id": "6660c46d5bd7273d906cdcc0",
+                "name": "Пахицереус Прингля",
+                "url": "pakhitsereus_pringlya",
+                "image": "0-2.jpg",
+                "price": 24
+            },
+            "quantity": 3
+        },
+        {
+            "product": {
+                "id": "6660c46d5bd7273d906cdcc1",
+                "name": "Эхинокактус Грузона",
+                "url": "ekhinokaktus_gruzona",
+                "image": "0-3.jpg",
+                "price": 24
+            },
+            "quantity": 1
+        }
+    ]
+}*/
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {
+    goto endRequest;//Если пришла ошибка - завршаем скрипт
+  } else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+
+  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!', 'count' => 0];//Создание массива с ответом Ок
+  //Получение корзины пользователя
+  $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
+  try{
+  $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
+  }
+
+  $result['createdAt'] = 0;$result['updatedAt'] = 0;$result['items'] = [];//Корректировка массива с ответом Ок
+  if (mysqli_num_rows($sqlResult)===0){
+    $result = createUserCart($link,$result,$userId);
+    if ($result['error']){
+      goto endRequest;
+    } else {
+      if ($_GET["cartCount"]){
+        unset($result['items']); 
+        unset($result['createdAt']); 
+        unset($result['updatedAt']); 
+        goto endRequest;
+      }// Обработка запроса количества товара
+      $result['items'] = []; $result['itemsInCart'] = 0;goto endRequest;
+      }
+  }//Если нет записи в таблице - создаем ответ и завершаем запрос
+
+  $row = mysqli_fetch_array($sqlResult);//парсинг 
+  if ($_GET["cartCount"]){
+    unset($result['items']); 
+    unset($result['createdAt']); 
+    unset($result['updatedAt']); 
+    if (empty($row['items'])){goto endRequest;} //Если поле пустое, завершаем
+    $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
+    if (count($userCartItems)===0) {goto endRequest;} // Если список пуст (пустой массив), завершаем
+    $result = calculateCartCount($link, $result, $userCartItems);
+    goto endRequest;
+  }// Обработка запроса количества товара
+
+  $result['createdAt']= $row['createdAt'];
+  $result['updatedAt'] = $row['updatedAt'];
+  if (empty($row['items'])){
+    goto endRequest;
+  }else{
+    $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
+    if (count($userCartItems)===0) {goto endRequest;}
+  }
+  $result = compileUserCart($link, $result,$userCartItems, $userId);
+
+} elseif ($method === 'DELETE'){
+  include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include 'scripts/tokensOp.php';//Проверка токена
+
+  $result = ['error' => false, 'code' => 200, 'message' => 'Cart cleared'];//Создание массива с ответом Ок
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;
+  } else $settings = getSettings($link);//Получение ключа шифрования.
+
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {
+    goto endRequest;//Если пришла ошибка - завршаем скрипт
+  }else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+  
+  $updatedAt=time();//Добавление временой метки
+  $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt WHERE `user_id` = $userId;";
+  //============= Запрос в БД =============
+  try{
+  $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']="Delete request rejected by database. ($emessage))";goto endRequest;
+  }
+  if ($sqlResult <> true) {
+    $sqlerror = mysqli_error($link);//Получение ошибки от БД
+    $result['error']=true;$result['code']=500;$result['message']="Delete request rejected by database. ($sqlerror) (Clear cart)";goto endRequest;
+  }
+
+} else {
+  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+}
+
+endRequest:
+if ($link) mysqli_close($link);
+http_response_code($result['code']); unset($result['code']);
+echo json_encode($result);
