@@ -1,0 +1,371 @@
+<?php
+header("Access-Control-Allow-Origin: * ");
+header("Content-Type: application/json");
+header("Access-Control-Allow-Methods: OPTIONS, POST, GET");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+$method = $_SERVER['REQUEST_METHOD'];
+
+if ($method === 'OPTIONS') {
+  http_response_code(200);//ответ на пробный запрос
+  return;
+} elseif ($method === 'POST') {
+  include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';
+  /*
+  {
+    "deliveryType": "self",
+    "firstName": "Владимир",
+    "lastName": "Волобуев",
+    "fatherName": "Эдуардович",
+    "phone": "380668000709",
+    "paymentType": "cardToCourier",
+    "email": "bob@gmail.com",
+    "comment": "Нет коммента"
+  }
+  {
+  "deliveryType": "delivery",
+  "firstName": "Владимир",
+  "lastName": "Волобуев",
+  "phone": "380668000709",
+  "email": "bob@gmail.com",
+  "paymentType": "cardOnline",
+  "zip": "Königsberger Str.",
+  "region": "Königsberger Str.",
+  "city": "Saarbrucken",
+  "street": "Königsberger Str.",
+  "house": "2",
+  "entrance": "1",
+  "apartment": "13",
+  "comment": "вава"
+  }
+   */
+  //Ошибки
+  /*
+  406 - Not Acceptable (Не достаточно товаров на складе. cartOp_func)
+   */
+  
+  $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
+
+  //Обработка входных данных
+  $postData = file_get_contents('php://input');//получение запроса
+  $postDataJson = json_decode($postData, true);//парсинг параметров запроса
+
+  $messages = [];//Массив для ошибок
+  if (!empty($postDataJson['deliveryType']) && intval($postDataJson['deliveryType'])>0){
+    $deliveryTypeId = intval($postDataJson['deliveryType']);
+  } else {$result['error']=true; $messages[] = 'Invalid deliveryType';}
+  if (!empty($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))){
+    $firstName=$postDataJson['firstName'];
+  } else {$result['error']=true; $messages[] = 'Invalid First Name!';}
+  if (!empty($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))){
+    $lastName=$postDataJson['lastName'];
+  } else {$result['error']=true; $messages[] = 'Invalid Last Name!';}
+  if (!empty($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))){
+    $phone=$postDataJson['phone'];
+  } else {$result['error']=true; $messages[] = 'Invalid Phone!';}
+  if (!empty($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))){
+    $email=$postDataJson['email'];
+  } else {$result['error']=true; $messages[] = 'Invalid Email!';}
+  if (!empty($postDataJson['paymentType']) && intval($postDataJson['paymentType'])>0){
+    $paymentTypeId = intval($postDataJson['paymentType']);
+  } else {$result['error']=true; $messages[] = 'Invalid Payment Type';}
+  if (!empty($postDataJson['comment'])){$comment=$postDataJson['comment'];}
+//Обязательные параметры проверены. Подключаемся к базе и проверяем токен для проверки остальных
+  if (!$result['error']){
+    $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+    if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
+    $result = checkToken($link, $result, getallheaders(),true);
+    if ($result['error']) {
+      goto endRequest;//Если пришла ошибка - завршаем скрипт
+    } else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+    
+    $sql = "SELECT * FROM `delivery_types` WHERE `id` = $deliveryTypeId";
+    try{
+      $sqlResult = mysqli_query($link, $sql);
+    } catch (Exception $e){
+      $emessage = $e->getMessage();
+      $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "(Orders->Delivery_types) ($emessage))";goto endRequest;
+    }
+    if (mysqli_num_rows($sqlResult) <> 1){
+      $result['error']=true; $result['code']=500; $result['message']="Selected Delivery Type not found!";
+    }
+    $selectedDelivery = mysqli_fetch_array($sqlResult);//парсинг
+    if (intval($selectedDelivery['disabled'])===1){
+      $result['error']=true; $result['code']=400; $result['message']="Selected Delivery Type not possible now!";
+    }
+    $needAddress = intval($selectedDelivery['addressNeed']);
+  }
+
+  //Проверка адреса если она необходима по доставке
+  if ($needAddress){
+    if (!empty($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))){
+      $address['zip']=$postDataJson['zip'];
+    } else {$result['error']=true; $messages[] = 'Invalid ZIP Code';}
+    if (!empty($postDataJson['region']) && in_array($postDataJson['region'], $regionsD)){
+      $address['region']=$postDataJson['region'];
+    } else {$result['error']=true; $messages[] = 'Invalid Region';}
+    if (!empty($postDataJson['city'])){$address['city']=$postDataJson['city'];} else {$result['error']=true; $messages[] = 'Invalid Сity!';}
+    if (!empty($postDataJson['street'])){$address['cistreetty']=$postDataJson['street'];} else {$result['error']=true; $messages[] = 'Invalid Street!';}
+    if (!empty($postDataJson['house'])){$address['house']=$postDataJson['house'];} else {$result['error']=true; $messages[] = 'Invalid House!';}
+    if (!empty($postDataJson['entrance'])){$address['entrance']=$postDataJson['entrance'];}
+    if (!empty($postDataJson['apartment'])){$address['apartment']=$postDataJson['apartment'];}
+  }
+
+  if (count($messages)>0) {
+    $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
+  }//Если есть ошибки данных - выводим их
+ 
+  //Начинаем обработку карзины пользователя
+  $sql= "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id` = $userId;";
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "(Orders->cart) ($emessage))";goto endRequest;
+  }
+  if (mysqli_num_rows($sqlResult) <> 1){
+    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart not found!";
+  }
+  $userCart = mysqli_fetch_array($sqlResult);//парсинг
+  
+  
+  if (empty($userCart['items'])){
+    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart empty!";goto endRequest;
+  } //Если поле пустое, завершаем
+  $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
+  if (count($userCartItems)===0) {
+    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart empty!";goto endRequest;
+  } // Если список пуст (пустой массив), завершаем
+
+  //$result['delivery'] = $selectedDelivery;
+  //$result['userCartItems'] = $userCartItems;
+  //$result['array'] = [$firstName,$lastName,$phone,$email, $paymentTypeId, $comment, $zip,$region, $city, $street, $house, $entrance, $apartment];
+
+  $result = cartToOrder($link,$result,$userCartItems,'ru');
+  if ($result['error']){
+    goto endRequest;
+  }
+  $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Переносим массив с новыми остатками товаов на складе
+  if (!is_array($updatesProducts)||count($updatesProducts)===0){
+    $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
+  }
+  $orderProducts = $result['products']; unset($result['products']);
+  $order=[];
+  $deliveryCost = intval($selectedDelivery['lPMinPrice'])<=intval($result['productsPrice'])?intval($selectedDelivery['low_price']):intval($selectedDelivery['delivery_price']);
+  $order['deliveryCost'] = $deliveryCost;
+  $order['deliveryType_id'] =$deliveryTypeId;
+  $order['delivery_info'] = $address;// Адрес доставки. Для БД нужно кодировать json_encode($address,JSON_UNESCAPED_UNICODE)
+  $order['firstName'] =$firstName; 
+  $order['lastName'] =$lastName; 
+  $order['paymentType_id'] =$lastName; 
+  $order['phone'] =$phone; 
+  $order['email'] =$email; 
+  $order['comment'] = $comment;
+  $order['status_id'] = $startOrderStatus;
+  $order['items'] = $orderProducts;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
+  $order['user_id'] = $userId;
+  $order['totalAmount'] = $deliveryCost + intval($result['productsPrice']);
+  $order['createdAt'] =time();
+  //$result['updatesProducts']=$updatesProducts;
+
+  //$result['order'] =$order; 
+
+  //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе 
+  //2) Сохранить запись в orders
+  //3) Очистить корзину
+  //4) Сгенерировать ответ пользователю
+ 
+  $result = updateProductsCounts($link, $result, $updatesProducts);
+  if ($result['error']===true){goto endRequest;}
+
+} elseif ($method === 'GET') {
+  include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
+  include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';
+  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!'];//Создание массива с ответом Ок
+  $priorityMsg = null; //Добавочное сообщение на случай не критической ошибка. Добавляется к ответу вместо message в конце успешной обработки соответств. запроса
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
+  
+  if ($db_connect_response['error'] == true || !$link) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
+  }
+ 
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {
+    goto endRequest;//Если пришла ошибка - завршаем скрипт
+  } else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+
+  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!', 'count' => 0];//Создание массива с ответом Ок
+  //Получение корзины пользователя
+  $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
+  try{
+  $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
+  }
+
+  $result['createdAt'] = 0;$result['updatedAt'] = 0;$result['items'] = [];//Корректировка массива с ответом Ок
+  if (mysqli_num_rows($sqlResult)===0){
+    $result = createUserCart($link,$result,$userId);
+    if ($result['error']){
+      goto endRequest;
+    } else {
+      if ($_GET["cartCount"]){
+        unset($result['items']); 
+        unset($result['createdAt']); 
+        unset($result['updatedAt']); 
+        goto endRequest;
+      }// Обработка запроса количества товара
+      $result['items'] = []; $result['itemsInCart'] = 0;goto endRequest;
+      }
+  }//Если нет записи в таблице - создаем ответ и завершаем запрос
+
+  $row = mysqli_fetch_array($sqlResult);//парсинг 
+
+
+} else {
+  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+}
+
+endRequest:
+if ($link) mysqli_close($link);
+http_response_code($result['code']); unset($result['code']);
+echo json_encode($result);
+
+/* запрос
+deliveryCost: 10
+deliveryType: "self"
+email: "bob@gmail.com"
+fatherName: "Эдуардович"
+firstName: "Владимир"
+items: [{id: "68d18ee8e3e68a8e84654cf5", name: "Сенецио Роули", quantity: 1, price: 26, total: 26},…]
+lastName: "Волобуев"
+paymentType: "cashToCourier"
+phone: "380668000709"
+status: "new"
+totalAmount: 76
+*/
+
+
+/*ответ после оформления заказа
+{
+    "items": [
+        {
+            "id": "68d18ee8e3e68a8e84654cf5",
+            "name": "Сенецио Роули",
+            "quantity": 1,
+            "price": 26,
+            "total": 26
+        },
+        {
+            "id": "68d18ee8e3e68a8e84654cf6",
+            "name": "Сансевиерия трехпучковая Муншайн",
+            "quantity": 1,
+            "price": 50,
+            "total": 50
+        }
+    ],
+    "deliveryCost": 10,
+    "totalAmount": 76,
+    "deliveryType": "self",
+    "firstName": "Владимир",
+    "lastName": "Волобуев",
+    "fatherName": "Эдуардович",
+    "phone": "380668000709",
+    "email": "bob@gmail.com",
+    "paymentType": "cashToCourier",
+    "status": "new",
+    "createdAt": "2025-09-22T18:01:12.856Z"
+}
+*/
+
+/* Get orders
+[
+    {
+        "items": [
+            {
+                "id": "68c8dce13b536f9110cac7f6",
+                "name": "Цветущие маммилярии",
+                "quantity": 3,
+                "price": 17,
+                "total": 51
+            },
+            {
+                "id": "68c8dce13b536f9110cac7f7",
+                "name": "Пахицереус Прингля",
+                "quantity": 2,
+                "price": 24,
+                "total": 48
+            },
+            {
+                "id": "68c8dce13b536f9110cac7f8",
+                "name": "Эхинокактус Грузона",
+                "quantity": 1,
+                "price": 24,
+                "total": 24
+            }
+        ],
+        "deliveryCost": 10,
+        "totalAmount": 123,
+        "deliveryType": "self",
+        "firstName": "Владимир",
+        "lastName": "Волобуев",
+        "fatherName": "Эдуардович",
+        "phone": "380668000709",
+        "email": "bob@gmail.com",
+        "paymentType": "cashToCourier",
+        "status": "new",
+        "createdAt": "2025-09-16T03:43:29.087Z"
+    },
+    {
+        "items": [
+            {
+                "id": "68d18ee8e3e68a8e84654cf5",
+                "name": "Сенецио Роули",
+                "quantity": 1,
+                "price": 26,
+                "total": 26
+            },
+            {
+                "id": "68d18ee8e3e68a8e84654cf6",
+                "name": "Сансевиерия трехпучковая Муншайн",
+                "quantity": 1,
+                "price": 50,
+                "total": 50
+            }
+        ],
+        "deliveryCost": 10,
+        "totalAmount": 76,
+        "deliveryType": "self",
+        "firstName": "Владимир",
+        "lastName": "Волобуев",
+        "fatherName": "Эдуардович",
+        "phone": "380668000709",
+        "email": "bob@gmail.com",
+        "paymentType": "cashToCourier",
+        "status": "new",
+        "createdAt": "2025-09-22T18:01:12.856Z"
+    }
+]
+
+*/

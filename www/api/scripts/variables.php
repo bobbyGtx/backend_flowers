@@ -11,6 +11,8 @@ $refrTokenLenght = 120;
 $accTokenLife = 12120;
 $refrTokenLife = 2629743;
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
+$language=['ru'=>'','en'=>'_en','de'=>'_de'];
+$startOrderStatus = 1;//Индекс начального статуа при создании заказа
 
 //Регулярки для проверки значений
 $emailRegEx = '/^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/iu';
@@ -21,6 +23,7 @@ $lastNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-Z
 $zipCodeRegEx = '/^[0-9]{5}$/';
 $accessTokenRegEx='/^[a-zA-Z0-9]{'.$accTokenLenght.'}$/';
 $refreshTokenRegEx='/^[a-zA-Z0-9]{'.$refrTokenLenght.'}$/';
+$regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];
 //Рассчёт путей на основное использование из папки api
 $noFotoFileName = 'no-image.jpg';//название файла заглушки картинки
 $photoDir = '../assets/';//Директория с фото. Обязательно с точки
@@ -41,3 +44,7 @@ $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
+
+$dataErr['notRecognized'] = 'Request parameters not recognized! ';
+
+$regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];

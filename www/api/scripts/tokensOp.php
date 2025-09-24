@@ -16,8 +16,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    if (empty($sqlSelRecord)) {
       $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['reqRejected'] . "($funcName)";return $result;
    }//Проверяем запрос в БД на успешность
-   $numRows = mysqli_num_rows($sqlSelRecord);
-   if ($numRows < 1) {
+   if (mysqli_num_rows($sqlSelRecord) < 1) {
       $result['error'] = true;$result['code'] = 401;$result['message'] = 'Token invalid!';
       return $result;
    }//Если записей нет - то такой токен не найден в базе. Разделение нужно для след. проверки

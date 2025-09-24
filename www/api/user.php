@@ -123,7 +123,9 @@ if ($method === 'OPTIONS') {
     $patchDeliveryInfo = $postDataJson['deliveryInfo'];
     $deliveryInfo = [];
     if (!empty($patchDeliveryInfo['region'])){
-      $deliveryInfo['region']=$patchDeliveryInfo['region'];
+      if (in_array($postDataJson['region'], $regionsD)){
+        $deliveryInfo['region']=$patchDeliveryInfo['region'];
+      }else{$result['error']=true; $messages[] ='Delivery Info -> Region invalid!';}
     } else {
       $result['error']=true; $messages[] ='Delivery Info -> Region are required!';  
     }
