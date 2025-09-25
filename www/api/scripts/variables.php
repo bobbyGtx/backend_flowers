@@ -46,5 +46,5 @@ $errors['userDataNotFound'] = 'User ID not found! ';
 $errors['MethodNotAllowed']='Method Not Allowed';
 
 $dataErr['notRecognized'] = 'Request parameters not recognized! ';
-
-$regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];
+$dataErr['dataInFunc'] = 'Error in data passed to the function! ';
+$infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';

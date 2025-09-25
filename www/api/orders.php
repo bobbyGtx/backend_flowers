@@ -14,6 +14,7 @@ if ($method === 'OPTIONS') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/cartOp.php';
+  include 'scripts/orderOp.php';
   /*
   {
     "deliveryType": "self",
@@ -45,6 +46,8 @@ if ($method === 'OPTIONS') {
   //Ошибки
   /*
   406 - Not Acceptable (Не достаточно товаров на складе. cartOp_func)
+  500 - ошибки вход данных в функции
+
    */
   
   $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
@@ -102,7 +105,7 @@ if ($method === 'OPTIONS') {
     }
     $selectedDelivery = mysqli_fetch_array($sqlResult);//парсинг
     if (intval($selectedDelivery['disabled'])===1){
-      $result['error']=true; $result['code']=400; $result['message']="Selected Delivery Type not possible now!";
+      $result['error']=true; $result['code']=400; $result['message']=$infoErrors['delivNotPos'];
     }
     $needAddress = intval($selectedDelivery['addressNeed']);
   }
@@ -155,7 +158,7 @@ if ($method === 'OPTIONS') {
   $result = cartToOrder($link,$result,$userCartItems,'ru');
   if ($result['error']){
     goto endRequest;
-  }
+  }//Получение всей информации о товарах в корзине и проверка наличия товара на складах
   $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Переносим массив с новыми остатками товаов на складе
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
@@ -179,15 +182,19 @@ if ($method === 'OPTIONS') {
   $order['createdAt'] =time();
   //$result['updatesProducts']=$updatesProducts;
 
-  //$result['order'] =$order; 
+  $result['order'] = $order; 
 
-  //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе 
-  //2) Сохранить запись в orders
   //3) Очистить корзину
   //4) Сгенерировать ответ пользователю
- 
+  //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
   $result = updateProductsCounts($link, $result, $updatesProducts);
   if ($result['error']===true){goto endRequest;}
+  //2) Сохранить запись в orders
+  $result = createOrder($link, $result, $order);
+  if ($result['error']===true){goto endRequest;}
+
+
+
 
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
