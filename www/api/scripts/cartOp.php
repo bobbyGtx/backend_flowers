@@ -1,7 +1,7 @@
 <?php
 //Создание корзины пользователю
 function createUserCart($link,$result, $userId){
-  include 'scripts/variables.php';
+  include 'variables.php';
   $funcName = 'createUserCart_func';
   if ($result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
@@ -32,6 +32,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
   $sqlStr='';//Переменная для создания условия запроса (всё что после WHERE) 
   $j=0;
   $quantities=[];
+  $mergedRecords = 0;//кол-во объединенных записей
   foreach($userCartItems as $value){
     $itemID = $value['productId'];
     settype($itemID, 'integer');
@@ -41,7 +42,10 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
       }else{
         $sqlStr=$sqlStr." OR `id`= $itemID";
       }
-      $quantities[$itemID] = $value['quantity'];
+      if (!empty($quantities[$itemID]) && $quantities[$itemID]>0){
+        $mergedRecords++;
+      }
+      $quantities[$itemID] += $value['quantity'];
       $j++;
     }
   }
@@ -54,6 +58,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
     $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
     goto endFunc;
   }
+
   if (mysqli_num_rows($sqlResult)===0){
     if ($result['error']){goto endFunc;}
     else{
@@ -70,13 +75,22 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
   $rows = mysqli_fetch_all($sqlResult,MYSQLI_ASSOC);//парсинг 
 
   if (count($rows) <> count($userCartItems)){
-    $priorityMsg = 'Some ['. count($userCartItems) - count($rows) .'] products were not found in the database and were removed from the cart.';
+    //Оптимизация продуктов и их сохранение в карзине
     $newProducts=[];
     foreach($rows as $product){
       $newProducts[]=['quantity'=>$quantities[$product['id']],'productId'=>$product['id']];
     }
-    $result = updateUserCart($link, $result, $userId, $newProducts);
+    $result = updateUserCart($link, $result, $userId, $newProducts, NULL, time());
     unset($newProducts);
+    //Выводим сообщение о причине группировки
+    $recordsLost = count($userCartItems) - count($rows) - $mergedRecords;
+    if ($recordsLost>0){
+      //Если есть не найденные данные, сообщаем о их кол-ве
+      $priorityMsg = 'Some ['. count($userCartItems) - count($rows) .'] products were not found in the database and were removed from the cart.';
+    } else{
+      //Если есть сгруппированные товары, сообщаем о их кол-ве
+      $priorityMsg = "Products were combined $mergedRecords times!";
+    }
   }
   $products=[]; $counter = 0; //$quantities - quantities
 
@@ -92,7 +106,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
 }//Функция для генерации удобного списка товаров в корзине
 
 function updateUserCart($link, $result, $userId, $itemList, $createdAt = null, $updatedAt = null){
-  include 'scripts/variables.php';
+  include 'variables.php';
   $funcName = 'updateUserCart_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
@@ -110,7 +124,7 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt = null, $
   }
 
   if (!empty($createdAt)){$createdAt = ",`createdAt`= $createdAt";}
-  if (!empty($updatedAt)){$updatedAt = ",`createdAt`= $updatedAt";}
+  if (!empty($updatedAt)){$updatedAt = ",`updatedAt`= $updatedAt";}
   //сохранение корзины
   $sql = "UPDATE `carts` SET `items`='$itemListSQL' $createdAt $updatedAt WHERE `user_id` = $userId;";
   try{
@@ -125,7 +139,7 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt = null, $
 }
 
 function calculateCartCount($link, $result, $userCartItems){
-  include 'scripts/variables.php';
+  include 'variables.php';
   $funcName = 'calculateCartCount_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}

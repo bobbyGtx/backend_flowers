@@ -13,6 +13,7 @@ if ($method === 'OPTIONS') {
 } elseif ($method === 'POST') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/deliveryOp.php';
   include 'scripts/cartOp.php';
   include 'scripts/orderOp.php';
   /*
@@ -45,8 +46,9 @@ if ($method === 'OPTIONS') {
    */
   //Ошибки
   /*
+  400 - доставка не возможна
   406 - Not Acceptable (Не достаточно товаров на складе. cartOp_func)
-  500 - ошибки вход данных в функции
+  500 - ошибки входящих данных в функции
 
    */
   
@@ -91,19 +93,12 @@ if ($method === 'OPTIONS') {
     }else{
       $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
     }
-  }
+    }
     
-    $sql = "SELECT * FROM `delivery_types` WHERE `id` = $deliveryTypeId";
-    try{
-      $sqlResult = mysqli_query($link, $sql);
-    } catch (Exception $e){
-      $emessage = $e->getMessage();
-      $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "(Orders->Delivery_types) ($emessage))";goto endRequest;
-    }
-    if (mysqli_num_rows($sqlResult) <> 1){
-      $result['error']=true; $result['code']=500; $result['message']="Selected Delivery Type not found!";
-    }
-    $selectedDelivery = mysqli_fetch_array($sqlResult);//парсинг
+    //Запрос инфо о доставке и обработка ответа
+    $result = getDeliveryInfo($link, $result, $deliveryTypeId);
+    if ($result['error']){goto endRequest;}
+    $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
     if (intval($selectedDelivery['disabled'])===1){
       $result['error']=true; $result['code']=400; $result['message']=$infoErrors['delivNotPos'];
     }
@@ -163,9 +158,10 @@ if ($method === 'OPTIONS') {
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
-  $orderProducts = $result['products']; unset($result['products']);
+  
+  $orderProducts = $result['products']; 
   $order=[];
-  $deliveryCost = intval($selectedDelivery['lPMinPrice'])<=intval($result['productsPrice'])?intval($selectedDelivery['low_price']):intval($selectedDelivery['delivery_price']);
+  $deliveryCost = intval($selectedDelivery['lPMinPrice'])<=intval($orderProducts['productsPrice'])?intval($selectedDelivery['low_price']):intval($selectedDelivery['delivery_price']);
   $order['deliveryCost'] = $deliveryCost;
   $order['deliveryType_id'] =$deliveryTypeId;
   $order['delivery_info'] = $address;// Адрес доставки. Для БД нужно кодировать json_encode($address,JSON_UNESCAPED_UNICODE)
@@ -178,23 +174,27 @@ if ($method === 'OPTIONS') {
   $order['status_id'] = $startOrderStatus;
   $order['items'] = $orderProducts;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
   $order['user_id'] = $userId;
-  $order['totalAmount'] = $deliveryCost + intval($result['productsPrice']);
+  $order['totalAmount'] = $deliveryCost + intval($orderProducts['productsPrice']);
   $order['createdAt'] =time();
+
+  unset($orderProducts['productsPrice']);
+  unset($result['products']);
   //$result['updatesProducts']=$updatesProducts;
 
   $result['order'] = $order; 
 
   //3) Очистить корзину
   //4) Сгенерировать ответ пользователю
+
   //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
-  $result = updateProductsCounts($link, $result, $updatesProducts);
-  if ($result['error']===true){goto endRequest;}
+  //$result = updateProductsCounts($link, $result, $updatesProducts);if ($result['error']===true){goto endRequest;}//учет купленных продуктов в БД
+  
+
   //2) Сохранить запись в orders
   $result = createOrder($link, $result, $order);
   if ($result['error']===true){goto endRequest;}
 
-
-
+  
 
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования

@@ -1,13 +1,14 @@
 <?php
 function cartToOrder($link, $result, $userCartItems, $lng=''){
-  include 'scripts/variables.php';
+  include 'variables.php';
   $funcName = 'cartToOrder_func';
+
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!is_array($userCartItems)){$result['error']=true; $result['message'] = $errors['productsNotFound'] . "($funcName)"; goto endFunc;}
   if (count($userCartItems)<1){$result['count'] = 0; goto endFunc;}
-
-    //Подготовка запроса информации всех товаров из корзины пользователя
+  
+  //Подготовка запроса информации всех товаров из корзины пользователя
   $sqlStr='';//Переменная для создания условия запроса (всё что после WHERE) 
   $j=0;
   $quantities=[];
@@ -33,6 +34,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
     goto endFunc;
   }
+  
   if (mysqli_num_rows($sqlResult)===0){
     if ($result['error']){goto endFunc;}
     else{
@@ -45,7 +47,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
       $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
     }
   }//Если нет записи в таблице - создаем и завершаем запрос
-
+  
   $rows = mysqli_fetch_all($sqlResult,MYSQLI_ASSOC);//парсинг 
 
   if (count($rows) <> count($userCartItems)){
@@ -67,7 +69,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     $quantity = intval($quantities[$product['id']]);//заказанное кол-во
     $quantityInStock = intval($product['count']);//доступно на складе
     if (($quantityInStock - $quantity)<0){
-      $result['error'] = true;$messages[]="not enough product (".$product['name'.$language[$lng]].") in stock.";
+      $result['error'] = true;$messages[]="Not enough product (".$product['name'.$language[$lng]].") in stock.";
     }
     $updatesProducts[intval($product['id'])]=($quantityInStock - $quantity);//подготавливаем массив для изменения кол-ва товара на складе и возвращаем его
     $totalProductPrice = $quantity*intval($product['price']);
@@ -76,16 +78,20 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     $products[]=$item;
     $counter += $quantities[$product['id']];
   }
+  
   if ($result['error'] && count($messages)>0){
-    $result['message'] = 'Not enough goods in stock';$result['code'] = 406;$result['messages'] = $messages;goto endFunc;
+    $result['code'] = 406; $result['message'] = $infoErrors['notEnoughtGoods']; goto endFunc;
   }//Если найдены нестыковки по кол-ву товаров - выходим
-  $result['products'] = $products; $result['productsPrice'] = $totalPrice;
+  $products['productsPrice']=$totalPrice;//Помещаем в ответ чистую рассчитанную стоимость товаров
+  $result['products'] = $products; 
   $result['updatesProducts'] = $updatesProducts;
   if (!empty($priorityMsg)){$result['message'] = $priorityMsg;}
 
   endFunc:
   return $result;
 }
+
+//Перенести в продуктс ОП если он будет
 function updateProductsCounts($link, $result, $updatesProducts){
   include 'scripts/variables.php';
   $funcName = 'updateProductsCounts_func';
@@ -106,7 +112,6 @@ function updateProductsCounts($link, $result, $updatesProducts){
   }
   // Превращаем массив id в строку для WHERE
   $idsSql = implode(',', $ids);
-  
 
   // Финальный запрос
   $sql = "UPDATE products SET count = CASE id $caseSql END WHERE id IN ($idsSql)";
@@ -133,19 +138,26 @@ function updateProductsCounts($link, $result, $updatesProducts){
 function createOrder($link, $result, $order){
   include 'scripts/variables.php';
   $funcName = 'createOrder_func';
-  
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (empty($order) || !is_array($order) || cout($order)<1){$result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)";goto endFunc;}
+ 
+  if (empty($order) || !is_array($order) || count($order)<1){
+    $result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)";
+    goto endFunc;
+  }
+
   if (!empty($order['items']) && is_array($order['items']) && count($order['items'])>0){
     //Преобразуем в строку json для сохранения в БД
     $order['items'] = json_encode($order['items'],JSON_UNESCAPED_UNICODE);
   } else {
     $result['error']=true; $result['code']=500; $result['message'] = $errors['productsNotFound'] . "($funcName)";goto endFunc;
   }//Если нет товаров для добавления, выходим с ошибкой
+  
   if (!empty($order['delivery_info']) && is_array($order['delivery_info']) && count($order['delivery_info'])>0){
     $order['delivery_info'] = json_encode($order['delivery_info'],JSON_UNESCAPED_UNICODE);
   }//Преобразуем в строку json для сохранения в БД
+
+
 
   endFunc:
   return $result;

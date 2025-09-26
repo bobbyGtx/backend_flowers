@@ -8,7 +8,7 @@ $refreshTokenField = 'refreshToken';//название поля
 $refrTokenLifeField = 'refrTokenEndTime';//название поля
 $accTokenLenght = 100;
 $refrTokenLenght = 120;
-$accTokenLife = 12120;
+$accTokenLife = 100000;
 $refrTokenLife = 2629743;
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];
@@ -37,8 +37,11 @@ $errors['insertReqRejected']='Request (INSERT) rejected by database. ';
 $errors['updReqRejected']='Request (UPDATE) rejected by database. ';
 $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
-
+$errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
 $errors['userIdNotFound'] = 'User ID not found! ';
+$dbError['unexpResponse'] = 'Unexpected response from Database! ';
+
+
 $errors['productNotFound'] = 'Product not found! ';
 $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
@@ -47,4 +50,5 @@ $errors['MethodNotAllowed']='Method Not Allowed';
 
 $dataErr['notRecognized'] = 'Request parameters not recognized! ';
 $dataErr['dataInFunc'] = 'Error in data passed to the function! ';
-$infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';
+$infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
+$infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
