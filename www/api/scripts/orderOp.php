@@ -82,8 +82,8 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
   if ($result['error'] && count($messages)>0){
     $result['code'] = 406; $result['message'] = $infoErrors['notEnoughtGoods']; goto endFunc;
   }//Если найдены нестыковки по кол-ву товаров - выходим
-  $products['productsPrice']=$totalPrice;//Помещаем в ответ чистую рассчитанную стоимость товаров
-  $result['products'] = $products; 
+  $products['productsPrice']=$totalPrice;//Помещаем в ответ чистую рассчитанную стоимость товаров 
+  $result['products'] = array_values($products); 
   $result['updatesProducts'] = $updatesProducts;
   if (!empty($priorityMsg)){$result['message'] = $priorityMsg;}
 
@@ -134,6 +134,28 @@ function updateProductsCounts($link, $result, $updatesProducts){
   endFunc:
   return $result;
 }//Обновление кол-ва продуктов в магазине исходя из заказа клиента
+
+function compileOrderData($incOrder, $selectedDelivery, $address, $products, $userId){
+  include 'scripts/variables.php';
+  $order=[];
+  $deliveryCost = intval($selectedDelivery['lPMinPrice'])<=intval($products['productsPrice'])?intval($selectedDelivery['low_price']):intval($selectedDelivery['delivery_price']);
+  $order['deliveryCost'] = $deliveryCost;
+  $order['deliveryType_id'] =$incOrder['deliveryTypeId'];
+  $order['delivery_info'] = $address;// Адрес доставки. Для БД нужно кодировать json_encode($address,JSON_UNESCAPED_UNICODE)
+  $order['firstName'] =$incOrder['firstName']; 
+  $order['lastName'] =$incOrder['lastName']; 
+  $order['paymentType_id'] =$incOrder['paymentTypeId']; 
+  $order['phone'] =$incOrder['phone']; 
+  $order['email'] =$incOrder['email']; 
+  $order['comment'] = $incOrder['comment'];
+  $order['status_id'] = $startOrderStatus;
+  $order['items'] = $products;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
+  $order['user_id'] = $userId;
+  $order['totalAmount'] = $deliveryCost + intval($products['productsPrice']);
+  $order['createdAt'] =time();
+
+  return $order;
+}//Подготовка переменной заказа для добавления в базу и для ответа
 
 function createOrder($link, $result, $order){
   include 'scripts/variables.php';

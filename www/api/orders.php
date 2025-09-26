@@ -47,9 +47,8 @@ if ($method === 'OPTIONS') {
   //Ошибки
   /*
   400 - доставка не возможна
-  406 - Not Acceptable (Не достаточно товаров на складе. cartOp_func)
+  406 - Not Acceptable (основной запрос не содержит некоторых данных!)(Не достаточно товаров на складе. cartOp_func), 
   500 - ошибки входящих данных в функции
-
    */
   
   $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
@@ -59,25 +58,26 @@ if ($method === 'OPTIONS') {
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
 
   $messages = [];//Массив для ошибок
+  $incOrder = [];//Переменная для сбора входящих данных заказа
   if (!empty($postDataJson['deliveryType']) && intval($postDataJson['deliveryType'])>0){
-    $deliveryTypeId = intval($postDataJson['deliveryType']);
+    $incOrder['deliveryTypeId'] = intval($postDataJson['deliveryType']);
   } else {$result['error']=true; $messages[] = 'Invalid deliveryType';}
   if (!empty($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))){
-    $firstName=$postDataJson['firstName'];
+    $incOrder['firstName']=$postDataJson['firstName'];
   } else {$result['error']=true; $messages[] = 'Invalid First Name!';}
   if (!empty($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))){
-    $lastName=$postDataJson['lastName'];
+    $incOrder['lastName']=$postDataJson['lastName'];
   } else {$result['error']=true; $messages[] = 'Invalid Last Name!';}
   if (!empty($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))){
-    $phone=$postDataJson['phone'];
+    $incOrder['phone']=$postDataJson['phone'];
   } else {$result['error']=true; $messages[] = 'Invalid Phone!';}
   if (!empty($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))){
-    $email=$postDataJson['email'];
+    $incOrder['email']=$postDataJson['email'];
   } else {$result['error']=true; $messages[] = 'Invalid Email!';}
   if (!empty($postDataJson['paymentType']) && intval($postDataJson['paymentType'])>0){
-    $paymentTypeId = intval($postDataJson['paymentType']);
+    $incOrder['paymentTypeId'] = intval($postDataJson['paymentType']);
   } else {$result['error']=true; $messages[] = 'Invalid Payment Type';}
-  if (!empty($postDataJson['comment'])){$comment=$postDataJson['comment'];}
+  if (!empty($postDataJson['comment'])){$incOrder['comment']=$postDataJson['comment'];}
 //Обязательные параметры проверены. Подключаемся к базе и проверяем токен для проверки остальных
   if (!$result['error']){
     $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
@@ -96,16 +96,17 @@ if ($method === 'OPTIONS') {
     }
     
     //Запрос инфо о доставке и обработка ответа
-    $result = getDeliveryInfo($link, $result, $deliveryTypeId);
+    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId']);
     if ($result['error']){goto endRequest;}
     $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
     if (intval($selectedDelivery['disabled'])===1){
       $result['error']=true; $result['code']=400; $result['message']=$infoErrors['delivNotPos'];
-    }
+    }//Проверка доступности выбранного метода доставки. 
     $needAddress = intval($selectedDelivery['addressNeed']);
   }
 
   //Проверка адреса если она необходима по доставке
+  $address=[];
   if ($needAddress){
     if (!empty($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))){
       $address['zip']=$postDataJson['zip'];
@@ -118,67 +119,29 @@ if ($method === 'OPTIONS') {
     if (!empty($postDataJson['house'])){$address['house']=$postDataJson['house'];} else {$result['error']=true; $messages[] = 'Invalid House!';}
     if (!empty($postDataJson['entrance'])){$address['entrance']=$postDataJson['entrance'];}
     if (!empty($postDataJson['apartment'])){$address['apartment']=$postDataJson['apartment'];}
-  }
+  } else {$address=null;}
 
   if (count($messages)>0) {
     $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
   }//Если есть ошибки данных - выводим их
  
   //Начинаем обработку карзины пользователя
-  $sql= "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id` = $userId;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "(Orders->cart) ($emessage))";goto endRequest;
-  }
-  if (mysqli_num_rows($sqlResult) <> 1){
-    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart not found!";
-  }
-  $userCart = mysqli_fetch_array($sqlResult);//парсинг
-  
-  
-  if (empty($userCart['items'])){
-    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart empty!";goto endRequest;
-  } //Если поле пустое, завершаем
-  $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
-  if (count($userCartItems)===0) {
-    $result['error']=true; $result['code']=500; $result['message']="Critical error! User cart empty!";goto endRequest;
-  } // Если список пуст (пустой массив), завершаем
+/*-----Получение списка товаров в корзине пользователя-----*/
+  $result = getCart($link, $result, $userId); //true возвращает объект как массив
+  if ($result['error']){goto endRequest;}
+  $userCartItems = $result['userCartItems']; unset($result['userCartItems']);
 
-  //$result['delivery'] = $selectedDelivery;
-  //$result['userCartItems'] = $userCartItems;
-  //$result['array'] = [$firstName,$lastName,$phone,$email, $paymentTypeId, $comment, $zip,$region, $city, $street, $house, $entrance, $apartment];
-
+/*-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----*/
   $result = cartToOrder($link,$result,$userCartItems,'ru');
-  if ($result['error']){
-    goto endRequest;
-  }//Получение всей информации о товарах в корзине и проверка наличия товара на складах
-  $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Переносим массив с новыми остатками товаов на складе
+  if ($result['error']){goto endRequest;}
+  $orderProducts = $result['products']; unset($result['products']);//Детализированный список продуктов в карзине
+  $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Массив с новыми остатками товаов на складе
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
+  $result['orderProducts'] = $orderProducts;
+  $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
   
-  $orderProducts = $result['products']; 
-  $order=[];
-  $deliveryCost = intval($selectedDelivery['lPMinPrice'])<=intval($orderProducts['productsPrice'])?intval($selectedDelivery['low_price']):intval($selectedDelivery['delivery_price']);
-  $order['deliveryCost'] = $deliveryCost;
-  $order['deliveryType_id'] =$deliveryTypeId;
-  $order['delivery_info'] = $address;// Адрес доставки. Для БД нужно кодировать json_encode($address,JSON_UNESCAPED_UNICODE)
-  $order['firstName'] =$firstName; 
-  $order['lastName'] =$lastName; 
-  $order['paymentType_id'] =$lastName; 
-  $order['phone'] =$phone; 
-  $order['email'] =$email; 
-  $order['comment'] = $comment;
-  $order['status_id'] = $startOrderStatus;
-  $order['items'] = $orderProducts;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
-  $order['user_id'] = $userId;
-  $order['totalAmount'] = $deliveryCost + intval($orderProducts['productsPrice']);
-  $order['createdAt'] =time();
-
-  unset($orderProducts['productsPrice']);
-  unset($result['products']);
   //$result['updatesProducts']=$updatesProducts;
 
   $result['order'] = $order; 

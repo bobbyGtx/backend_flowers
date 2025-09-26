@@ -40,11 +40,12 @@ $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
 $errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
 $errors['userIdNotFound'] = 'User ID not found! ';
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';
-
+$dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 
 $errors['productNotFound'] = 'Product not found! ';
 $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
+$errors['cartEmpty'] = 'Critical error! User cart empty! ';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
 

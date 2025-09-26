@@ -153,3 +153,33 @@ function calculateCartCount($link, $result, $userCartItems){
   endFunc:
   return $result;
 }
+
+function getCart($link, $result, $userId){
+  include 'variables.php';
+  $funcName = 'getCart_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+
+  $sql= "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id` = $userId;";
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+  }
+  if (mysqli_num_rows($sqlResult) <> 1){$result['error']=true; $result['code']=500; $result['message']=$dbError['cartNotFound'] . "($funcName)";}
+  $userCart = mysqli_fetch_array($sqlResult);//парсинг
+  
+  if (empty($userCart['items'])){
+    $result['error']=true; $result['code']=500; $result['message']=$errors['cartEmpty'] . "($funcName)";goto endFunc;
+  } //Если поле пустое, завершаем
+  $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
+  if (count($userCartItems)===0) {
+    $result['error']=true; $result['code']=500; $result['message']=$errors['cartEmpty'] . "($funcName)";goto endFunc;
+  } // Если список пуст (пустой массив), завершаем
+  $result['userCartItems'] = $userCartItems;
+
+  endFunc:
+  return $result;
+}//Получение данных корзины пользователя
