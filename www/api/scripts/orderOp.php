@@ -46,7 +46,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
       }
       $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
     }
-  }//Если нет записи в таблице - создаем и завершаем запрос
+  }
   
   $rows = mysqli_fetch_all($sqlResult,MYSQLI_ASSOC);//парсинг 
 
@@ -71,6 +71,9 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     if (($quantityInStock - $quantity)<0){
       $result['error'] = true;$messages[]="Not enough product (".$product['name'.$language[$lng]].") in stock.";
     }
+    if ($product['disabled']){
+      $result['error'] = true;$messages[]="Product (".$product['name'.$language['en']].") in the cart is not available.";
+    }
     $updatesProducts[intval($product['id'])]=($quantityInStock - $quantity);//подготавливаем массив для изменения кол-ва товара на складе и возвращаем его
     $totalProductPrice = $quantity*intval($product['price']);
     $totalPrice += $totalProductPrice;
@@ -78,12 +81,11 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     $products[]=$item;
     $counter += $quantities[$product['id']];
   }
-  
+
   if ($result['error'] && count($messages)>0){
-    $result['code'] = 406; $result['message'] = $infoErrors['notEnoughtGoods']; goto endFunc;
+    $result['code'] = 406; $result['message'] = $infoErrors['notEnoughtGoods']; $result['messages'] = $messages; goto endFunc;
   }//Если найдены нестыковки по кол-ву товаров - выходим
-  $products['productsPrice']=$totalPrice;//Помещаем в ответ чистую рассчитанную стоимость товаров 
-  $result['products'] = array_values($products); 
+  $result['products'] =$products; 
   $result['updatesProducts'] = $updatesProducts;
   if (!empty($priorityMsg)){$result['message'] = $priorityMsg;}
 
@@ -93,6 +95,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
 
 //Перенести в продуктс ОП если он будет
 function updateProductsCounts($link, $result, $updatesProducts){
+  //Функция автоматом дизейблит товар, когда его кол-во на складе = 0
   include 'scripts/variables.php';
   $funcName = 'updateProductsCounts_func';
 
@@ -103,18 +106,26 @@ function updateProductsCounts($link, $result, $updatesProducts){
     $result['error'] = true; $result['code'] = 500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;
   }
 
-  // Формируем часть CASE WHEN для запроса
-  $caseSql = '';
-  $ids = [];
-  foreach ($updatesProducts as $id => $newCount) {
+$caseSql = '';
+$ids = [];
+
+foreach ($updatesProducts as $id => $newCount) {
     $caseSql .= "WHEN {$id} THEN {$newCount} ";
     $ids[] = $id;
-  }
-  // Превращаем массив id в строку для WHERE
-  $idsSql = implode(',', $ids);
-
-  // Финальный запрос
-  $sql = "UPDATE products SET count = CASE id $caseSql END WHERE id IN ($idsSql)";
+}
+$idsSql = implode(',', $ids);
+// Финальный запрос
+$sql = "
+UPDATE products
+SET 
+    count = CASE id
+        $caseSql
+    END,
+    disabled = (CASE id
+        $caseSql
+    END = 0)
+WHERE id IN ($idsSql);
+";
   try {
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e) {
@@ -150,7 +161,7 @@ function compileOrderData($incOrder, $selectedDelivery, $address, $products, $us
   $order['comment'] = $incOrder['comment'];
   $order['status_id'] = $startOrderStatus;
   $order['items'] = $products;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
-  $order['user_id'] = $userId;
+  $order['user_id'] = intval($userId);
   $order['totalAmount'] = $deliveryCost + intval($products['productsPrice']);
   $order['createdAt'] =time();
 
@@ -178,8 +189,26 @@ function createOrder($link, $result, $order){
   if (!empty($order['delivery_info']) && is_array($order['delivery_info']) && count($order['delivery_info'])>0){
     $order['delivery_info'] = json_encode($order['delivery_info'],JSON_UNESCAPED_UNICODE);
   }//Преобразуем в строку json для сохранения в БД
+  
+  $result = prepareInsertSQL($result, 'orders',$order);
+  if ($result['error']) {goto endFunc;}
+  $stmtData = $result['data']; unset($result['data']);
 
+  mysqli_report(MYSQLI_REPORT_ALL);
+  try{
+    $stmt = mysqli_prepare($link, $stmtData['sql']);
+    mysqli_stmt_bind_param($stmt, $stmtData['types'],...$stmtData['values']);
+    mysqli_stmt_execute($stmt);
+    $newOrderId = mysqli_insert_id($link);
+    mysqli_stmt_close($stmt);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+  }
 
+  if (empty($newOrderId) && $newOrderId<1){
+    $result['error']=true; $result['code']=500; $result['message']="Problem with OrderID. Creating Order record in DB impossible.($funcName) ($emessage))";goto endFunc;
+  }
 
   endFunc:
   return $result;

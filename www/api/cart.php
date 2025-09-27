@@ -216,44 +216,33 @@ $result = compileUserCart($link,$result,$userCartItems, $userId );
     if (count($userCartItems)===0) {goto endRequest;}
   }
   $result = compileUserCart($link, $result,$userCartItems, $userId);
+  if ($result['error']){goto endRequest;}
+  
 
 } elseif ($method === 'DELETE'){
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';//Проверка токена
 
   $result = ['error' => false, 'code' => 200, 'message' => 'Cart cleared'];//Создание массива с ответом Ок
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
   } else $settings = getSettings($link);//Получение ключа шифрования.
 
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  }else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
+    if ($result['error']) {goto endRequest;}
+    else {
+      if ($result['userId'] && $result['userPassword']){
+        $userId = $result['userId'];unset($result['userId']);
+        $userPwd = $result['userPassword'];unset($result['userPassword']);
+      }else{
       $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+      }//Проверка наличия логина и пароля
     }
-  }
-  
-  $updatedAt=time();//Добавление временой метки
-  $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt WHERE `user_id` = $userId;";
-  //============= Запрос в БД =============
-  try{
-  $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Delete request rejected by database. ($emessage))";goto endRequest;
-  }
-  if ($sqlResult <> true) {
-    $sqlerror = mysqli_error($link);//Получение ошибки от БД
-    $result['error']=true;$result['code']=500;$result['message']="Delete request rejected by database. ($sqlerror) (Clear cart)";goto endRequest;
-  }
+  $result = clearUserCart($link, $result, $userId);
+  if ($result['error']) goto endRequest; //на всякий случай
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';

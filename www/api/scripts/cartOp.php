@@ -183,3 +183,24 @@ function getCart($link, $result, $userId){
   endFunc:
   return $result;
 }//Получение данных корзины пользователя
+
+function clearUserCart($link, $result, $userId){
+  include 'variables.php';
+  $funcName = 'clearUserCart_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  
+  $updatedAt=time();//Добавление временой метки
+  $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt WHERE `user_id` = $userId;";
+
+  try{
+  $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['delReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+  }
+  
+  endFunc:
+  return $result;
+}

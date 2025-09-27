@@ -14,8 +14,10 @@ if ($method === 'OPTIONS') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/deliveryOp.php';
+  include 'scripts/paymentOp.php';
   include 'scripts/cartOp.php';
   include 'scripts/orderOp.php';
+  include 'scripts/sqlOp.php';
   /*
   {
     "deliveryType": "self",
@@ -83,16 +85,14 @@ if ($method === 'OPTIONS') {
     $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
     if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
     $result = checkToken($link, $result, getallheaders(),true);
-    if ($result['error']) {
-      goto endRequest;//Если пришла ошибка - завршаем скрипт
-    } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
+    if ($result['error']) {goto endRequest;}
+    else {
+      if ($result['userId'] && $result['userPassword']){
+        $userId = $result['userId'];unset($result['userId']);
+        $userPwd = $result['userPassword'];unset($result['userPassword']);
+      }else{
       $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-    }
+      }//Проверка наличия логина и пароля
     }
     
     //Запрос инфо о доставке и обработка ответа
@@ -121,6 +121,10 @@ if ($method === 'OPTIONS') {
     if (!empty($postDataJson['apartment'])){$address['apartment']=$postDataJson['apartment'];}
   } else {$address=null;}
 
+  //Проверка правильности и доступности метода оплаты
+  $result = checkPayment($link,$result, $incOrder['paymentTypeId']);
+  if ($result['error']){goto endRequest;}
+
   if (count($messages)>0) {
     $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
   }//Если есть ошибки данных - выводим их
@@ -134,19 +138,18 @@ if ($method === 'OPTIONS') {
 /*-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----*/
   $result = cartToOrder($link,$result,$userCartItems,'ru');
   if ($result['error']){goto endRequest;}
+
   $orderProducts = $result['products']; unset($result['products']);//Детализированный список продуктов в карзине
   $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Массив с новыми остатками товаов на складе
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
-  $result['orderProducts'] = $orderProducts;
   $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
   
   //$result['updatesProducts']=$updatesProducts;
 
-  $result['order'] = $order; 
+  //$result['order'] = $order; 
 
-  //3) Очистить корзину
   //4) Сгенерировать ответ пользователю
 
   //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
@@ -155,7 +158,11 @@ if ($method === 'OPTIONS') {
 
   //2) Сохранить запись в orders
   $result = createOrder($link, $result, $order);
-  if ($result['error']===true){goto endRequest;}
+  if ($result['error'])goto endRequest;
+
+  //Чистка корзины пользователя после успешного создания заказа
+  //$result = clearUserCart($link, $result, $userId);
+  if ($result['error']) goto endRequest; //на всякий случай
 
   
 
@@ -222,7 +229,9 @@ if ($link) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
 echo json_encode($result);
 
-/* запрос
+
+/* 
+запрос
 deliveryCost: 10
 deliveryType: "self"
 email: "bob@gmail.com"

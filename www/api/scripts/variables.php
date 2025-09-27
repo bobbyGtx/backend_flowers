@@ -38,13 +38,16 @@ $errors['updReqRejected']='Request (UPDATE) rejected by database. ';
 $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
 $errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
+$errors['paymentIdNotFound'] ='Payment method identifier not found! '; 
 $errors['userIdNotFound'] = 'User ID not found! ';
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
+$dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
 
 $errors['productNotFound'] = 'Product not found! ';
 $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
+$errors['dataNotFound'] = 'No data was passed to the function or it was incorrect. ';
 $errors['cartEmpty'] = 'Critical error! User cart empty! ';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
@@ -52,4 +55,5 @@ $errors['MethodNotAllowed']='Method Not Allowed';
 $dataErr['notRecognized'] = 'Request parameters not recognized! ';
 $dataErr['dataInFunc'] = 'Error in data passed to the function! ';
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
+$infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
 $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
