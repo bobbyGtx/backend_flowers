@@ -63,7 +63,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
     if ($result['error']){goto endFunc;}
     else{
       if (count($userCartItems)>0){
-        $result = updateUserCart($link, $result, $userId, NULL);
+        $result = updateUserCart($link, $result, $userId, NULL,NULL,NULL);
         if (!$result['error']){
           $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
         } else {goto endFunc;}
@@ -86,7 +86,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
     $recordsLost = count($userCartItems) - count($rows) - $mergedRecords;
     if ($recordsLost>0){
       //Если есть не найденные данные, сообщаем о их кол-ве
-      $priorityMsg = 'Some ['. count($userCartItems) - count($rows) .'] products were not found in the database and were removed from the cart.';
+      $priorityMsg = 'Some ['. count($userCartItems) - count($rows) .'] products were not found in the database and were removed from the cart.' . "($funcName)";
     } else{
       //Если есть сгруппированные товары, сообщаем о их кол-ве
       $priorityMsg = "Products were combined $mergedRecords times!";
@@ -105,9 +105,10 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
   return $result;
 }//Функция для генерации удобного списка товаров в корзине
 
-function updateUserCart($link, $result, $userId, $itemList, $createdAt = null, $updatedAt = null){
+function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updatedAt){
   include 'variables.php';
   $funcName = 'updateUserCart_func';
+  //$result['itemList'] = $itemList;
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
@@ -116,15 +117,11 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt = null, $
   
   if (empty($itemList) || !is_array($itemList)){
     $itemListSQL = 'NULL';
-    $createdAt = 'NULL';
-    $updatedAt = time();
   }else{
     $itemListSQL = json_encode($itemList);
-    $updatedAt = time();
   }
-
-  if (!empty($createdAt)){$createdAt = ",`createdAt`= $createdAt";}
-  if (!empty($updatedAt)){$updatedAt = ",`updatedAt`= $updatedAt";}
+  if (intval($createdAt)){$createdAt = ",`createdAt`= $createdAt";} else {unset($createdAt);}
+  if (intval($updatedAt)){$updatedAt = ",`updatedAt`= $updatedAt";} else {unset($updatedAt);}
   //сохранение корзины
   $sql = "UPDATE `carts` SET `items`='$itemListSQL' $createdAt $updatedAt WHERE `user_id` = $userId;";
   try{
@@ -192,7 +189,7 @@ function clearUserCart($link, $result, $userId){
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
   
   $updatedAt=time();//Добавление временой метки
-  $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt WHERE `user_id` = $userId;";
+  $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt ,`createdAt`= NULL WHERE `user_id` = $userId;";
 
   try{
   $sqlResult = mysqli_query($link, $sql);

@@ -192,7 +192,6 @@ function createOrder($link, $result, $order){
   if ($result['error']) {goto endFunc;}
   $stmtData = $result['data']; unset($result['data']);
 
-  mysqli_report(MYSQLI_REPORT_ALL);
   try{
     $stmt = mysqli_prepare($link, $stmtData['sql']);
     mysqli_stmt_bind_param($stmt, $stmtData['types'],...$stmtData['values']);
@@ -207,6 +206,7 @@ function createOrder($link, $result, $order){
   if (empty($newOrderId) && $newOrderId<1){
     $result['error']=true; $result['code']=500; $result['message']="Problem with OrderID. Creating Order record in DB impossible.($funcName) ($emessage))";goto endFunc;
   }
+  $result['newOrderId'] = $newOrderId;
 
   endFunc:
   return $result;
@@ -224,7 +224,7 @@ function getOrder($link, $result, $orderId, $lng='ru'){
     orders.*,
     delivery_types.deliveryType,delivery_types.deliveryType_en,delivery_types.deliveryType_de,delivery_types.addressNeed,
     payment_types.paymentType,payment_types.paymentType_en,payment_types.paymentType_de,
-    statuses.statusName,statuses.statusName_en,statuses.statusName_en
+    statuses.statusName,statuses.statusName_en,statuses.statusName_de
     FROM orders 
     LEFT OUTER JOIN statuses ON orders.status_id = statuses.id 
     LEFT OUTER JOIN delivery_types ON orders.deliveryType_id = delivery_types.id
@@ -262,7 +262,7 @@ function getOrder($link, $result, $orderId, $lng='ru'){
   $order['createdAt'] = $row['createdAt'];
   $order['updatedAt'] = $row['updatedAt'];
   $order['totalAmount'] = $row['totalAmount'];
-  
+
   $result['order']=$order;
 
 

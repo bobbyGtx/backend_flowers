@@ -50,14 +50,13 @@ if ($method === 'OPTIONS') {
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
     $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "(EditCart->Request_aktual_cart) ($emessage))";goto endRequest;
   }
   $numRows = mysqli_num_rows($sqlResult);
 
-  $userCartItems=NULL;
-  $userCartCreatedAt = NULL;
-  $userCartUpdatedAt = NULL;
-  $userCart = ['user_id' => $userId, 'items' => [], 'createdAt' => null, 'updatedAt' => null];
+  $userCartItems=0;
+  $userCartCreatedAt = 0;
+  $userCartUpdatedAt = 0;
   $row = mysqli_fetch_array($sqlResult);//парсинг 
   
   if ($numRows === 1){
@@ -65,15 +64,14 @@ if ($method === 'OPTIONS') {
     $userCartUpdatedAt = $row['updatedAt'];
     if (!empty($row['items'])){
       $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
+      if (!is_array($userCartItems) || count($userCartItems)<1){$userCartItems = [];}
     }else{$userCartItems = [];}
-
-        
     if (count($userCartItems)>0) {
       //Если в корзине уже есть элементы, ищем соответствие
       $userCartUpdatedAt = time();
       $findRecordFlag=false;
       foreach($userCartItems as &$value){
-        if ($value['productId'] == $postProductId){
+        if (intval($value['productId']) === intval($postProductId)){
           $value['quantity'] = $postQuantity;
           $findRecordFlag=true;
           break;
@@ -83,19 +81,20 @@ if ($method === 'OPTIONS') {
         array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
       }
     }else {
-      $userCartUpdatedAt = NULL;
+      $userCartUpdatedAt = 0;
       $userCartCreatedAt = time();
-      array_push($userCartItems,['productId ' => $postProductId,'quantity ' => $postQuantity]);
+      array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
     }
     
   }elseif ($numRows === 0){
-    $result = createUserCart($link, $result, $newUserId);//Создание записи в таблице корзин, если такой не было
+    $result = createUserCart($link, $result, $userId);//Создание записи в таблице корзин, если такой не было
     if ($result['error']){goto endRequest;}
     $userCartCreatedAt = time();
+    $userCartItems=[];
+    array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
   }else{
     $result['error']=true; $result['code'] = 500; $result['message'] = 'Error! Multiple records were found in the database! (CartEdit)'; goto endRequest;
   }
-
   $result = updateUserCart($link, $result, $userId, $userCartItems, $userCartCreatedAt, $userCartUpdatedAt);
   $userCartItemsSQL = json_encode($userCartItems);
 
