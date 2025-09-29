@@ -101,7 +101,6 @@ function updateProductsCounts($link, $result, $updatesProducts){
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  
   if (!is_array($updatesProducts)|| count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;
   }
@@ -173,7 +172,6 @@ function createOrder($link, $result, $order){
   $funcName = 'createOrder_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
- 
   if (empty($order) || !is_array($order) || count($order)<1){
     $result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)";
     goto endFunc;
@@ -213,3 +211,103 @@ function createOrder($link, $result, $order){
   endFunc:
   return $result;
 }//добавление заказа в таблицу
+
+function getOrder($link, $result, $orderId, $lng='ru'){
+  include 'scripts/variables.php';
+  $funcName = 'getOrder_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$orderId || intval($orderId)<1) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  settype($userId, 'integer');
+
+  $sql = "SELECT 
+    orders.*,
+    delivery_types.deliveryType,delivery_types.deliveryType_en,delivery_types.deliveryType_de,delivery_types.addressNeed,
+    payment_types.paymentType,payment_types.paymentType_en,payment_types.paymentType_de,
+    statuses.statusName,statuses.statusName_en,statuses.statusName_en
+    FROM orders 
+    LEFT OUTER JOIN statuses ON orders.status_id = statuses.id 
+    LEFT OUTER JOIN delivery_types ON orders.deliveryType_id = delivery_types.id
+    LEFT OUTER JOIN payment_types ON orders.paymentType_id = payment_types.id
+    WHERE orders.id = $orderId";
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
+    goto endFunc;
+  }
+
+  if (mysqli_num_rows($sqlResult)===0){
+    $result['error']=true; $result['code']=500; $result['message'] = $dbError['recordNotFound'] . "($funcName)";
+  }
+
+  $row = mysqli_fetch_array($sqlResult);//парсинг
+  $order = [];
+  $order['id'] = $row['id'];
+  $order['deliveryCost'] = $row['deliveryCost'];
+  $order['deliveryType_id'] = $row['deliveryType_id'];
+  $order['deliveryType'] = $row['deliveryType' . $language[$lng]];
+  !empty($row['delivery_info'])?$order['delivery_info'] = json_decode($row['delivery_info']):NULL; 
+  $order['firstName'] = $row['firstName'];
+  $order['lastName'] = $row['lastName'];
+  $order['phone'] = $row['phone'];
+  $order['email'] = $row['email'];
+  $order['paymentType_id'] = $row['paymentType_id'];
+  $order['paymentType'] = $row['paymentType' . $language[$lng]];
+  $order['comment'] = $row['comment'];
+  $order['status_id'] = $row['status_id'];
+  $order['statusName'] = $row['statusName' . $language[$lng]];
+  $order['items'] = json_decode($row['items']);
+  $order['createdAt'] = $row['createdAt'];
+  $order['updatedAt'] = $row['updatedAt'];
+  $order['totalAmount'] = $row['totalAmount'];
+  
+  $result['order']=$order;
+
+
+  endFunc:
+  return $result;
+
+  /*{
+    "id": 1,
+    "deliveryCost": 10,
+    "deliveryType_id": 1,
+    "deliveryType": "self",
+    "delivery_info": {
+         "zip": "66119",
+         "city": "Saarbrücken",
+         "house": "10",
+         "region": "Saarland",
+         "cistreetty": "Rubensstr."
+     },
+    "firstName": "Владимир",
+    "lastName": "Волобуев",
+    "phone": "380668000709",
+    "email": "bob@gmail.com",
+    "paymentType_id": 1,
+    "paymentType": "self",
+    "comment": "comment",
+    "status_id": 1,
+    "statusName": "new",
+    "items": [
+        {
+            "id": "68d18ee8e3e68a8e84654cf5",
+            "name": "Сенецио Роули",
+            "quantity": 1,
+            "price": 26,
+            "total": 26
+        },
+        {
+            "id": "68d18ee8e3e68a8e84654cf6",
+            "name": "Сансевиерия трехпучковая Муншайн",
+            "quantity": 1,
+            "price": 50,
+            "total": 50
+        }
+    ],
+    "createdAt": "2025-09-22T18:01:12.856Z",
+    "updatedAt": "2025-09-22T18:01:12.856Z",
+    "totalAmount": 76
+}*/
+}//получение информации о заказах

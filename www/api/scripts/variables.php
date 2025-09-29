@@ -1,6 +1,7 @@
 <?php
 $settingsFile = "../../DBSettings/dbData.json";//путь из папки scripts
 //переменные для работы с токенами
+$accessTokenHeader = 'x-access-token';
 $userTableName = 'users';//название таблицы с токенами
 $accTokenField = 'accessToken';//название поля
 $accTokenLifeField = 'accTokenEndTime';//название поля
@@ -11,7 +12,7 @@ $refrTokenLenght = 120;
 $accTokenLife = 100000;
 $refrTokenLife = 2629743;
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
-$language=['ru'=>'','en'=>'_en','de'=>'_de'];
+$language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
 $startOrderStatus = 1;//Индекс начального статуа при создании заказа
 
 //Регулярки для проверки значений
@@ -39,10 +40,12 @@ $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
 $errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
 $errors['paymentIdNotFound'] ='Payment method identifier not found! '; 
-$errors['userIdNotFound'] = 'User ID not found! ';
+$errors['userIdNotFound'] = 'User ID not found in function! ';
+$errors['orderIdNotFound'] = 'Order ID not found in function! ';
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 $dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
+$dbError['recordNotFound'] = 'Requested Record not found! ';
 
 $errors['productNotFound'] = 'Product not found! ';
 $errors['productsNotFound'] = 'Products not found! ';

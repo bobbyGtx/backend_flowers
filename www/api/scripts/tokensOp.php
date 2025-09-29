@@ -3,14 +3,12 @@
 function checkToken($link, $result, $http_Headers,$userData = false){
    include 'variables.php';
    $funcName = 'checkToken_func';
-   if (empty($http_Headers['X-Access-Token'])) {
-      $http_AccessToken = $http_Headers['x-access-token'];
-   } else {
-      $http_AccessToken = $http_Headers['X-Access-Token'];
-   }
+   $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
+   $http_AccessToken = $http_Headers[$accessTokenHeader];
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
       $result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
    }
+
    $sql = "SELECT `id`, `password`,`$accTokenField`,`$accTokenLifeField` FROM `$userTableName` WHERE `$accTokenField` = '" . $http_AccessToken . "'";
    $sqlSelRecord = mysqli_query($link, $sql);//выполняем запрос
    if (empty($sqlSelRecord)) {

@@ -6,6 +6,8 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
+$requestheaders = array_change_key_case(getallheaders(), CASE_LOWER);
+$requestLanguage = $requestheaders['x-language'];
 
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
@@ -54,7 +56,6 @@ if ($method === 'OPTIONS') {
    */
   
   $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
-
   //Обработка входных данных
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
@@ -145,24 +146,21 @@ if ($method === 'OPTIONS') {
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
   $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
-  
-  //$result['updatesProducts']=$updatesProducts;
-
-  //$result['order'] = $order; 
-
-  //4) Сгенерировать ответ пользователю
 
   //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
   //$result = updateProductsCounts($link, $result, $updatesProducts);if ($result['error']===true){goto endRequest;}//учет купленных продуктов в БД
-  
 
   //2) Сохранить запись в orders
-  $result = createOrder($link, $result, $order);
+  //$result = createOrder($link, $result, $order);
   if ($result['error'])goto endRequest;
 
   //Чистка корзины пользователя после успешного создания заказа
   //$result = clearUserCart($link, $result, $userId);
-  if ($result['error']) goto endRequest; //на всякий случай
+  if ($result['error']) goto endRequest; 
+
+  //4) Сгенерировать ответ пользователю
+  $result = getOrder($link, $result, 1,$requestLanguage);
+  if ($result['error']) goto endRequest;
 
   
 
