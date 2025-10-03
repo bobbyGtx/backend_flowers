@@ -1,13 +1,22 @@
 <?php
 //Создание корзины пользователю
-function createUserCart($link,$result, $userId){
+function createUserCart($link,$result, $userId, $products = NULL){
   include 'variables.php';
   $funcName = 'createUserCart_func';
   if ($result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
-$sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', NULL, NULL, NULL);";
+  $createdAt = 'NULL';
+  if ($products && is_array($products)){
+    $products = json_encode($products);
+    $createdAt = time();
+  }else{
+    $products = 'NULL';
+  }
+
+  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', '$products', $createdAt, NULL);";
+  $result['sql']= $sql;
   try{
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -19,7 +28,48 @@ $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`)
   return $result;
 }
 
-function compileUserCart($link, $result, $userCartItems, $userId ){
+function checkProduct(mysqli $link, array $result, int $productId, int $quantity){
+  include 'variables.php';
+  $funcName = 'checkProducts_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$productId){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
+  if (!$quantity){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
+
+  //Делаем запрос всех товаров из списка
+  $sql = "SELECT `id`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
+    goto endFunc;
+  }
+
+  if (mysqli_num_rows($sqlResult)===0){
+    $result['error']=true; $result['code']=500; $result['message']=$errors['productNotFound'] . "id=[$productId]"; goto endFunc;
+  }//Продукт не найден в таблице продуктов
+
+  $row = mysqli_fetch_array($sqlResult,MYSQLI_ASSOC);//парсинг
+  if (intval($row['id'])<>$productId){
+    $result['error']=true; $result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)"; goto endFunc;
+  }//В ответе идентификатор не найден или отличается от запрошенного
+
+  if ($row['disabled']){
+    $result['error']=true; $result['code']=400;
+    $result['message']=$infoErrors['productNotAvailable'];
+    goto endFunc;
+  }//Товар не доступен
+  if ((intval($row['count']) - $quantity)<0){
+    $result['error']=true; $result['code']=400;
+    $result['message']=$infoErrors['notEnoughtGoods'] . 'There are ' .$row['count']. " units of this product in stock out of $quantity.";
+    goto endFunc;
+  }//Товара не достаточно
+  endFunc:
+  return $result;
+}//Проверка наличия товаров в базе и достаточности на складе
+
+function compileUserCart($link, $result, $userCartItems, $userId, $languageTag=''){
   include 'scripts/variables.php';
   $funcName = 'compileUserCart_func';
   //В result уже должны быть метки даты создания и изменения
@@ -50,7 +100,7 @@ function compileUserCart($link, $result, $userCartItems, $userId ){
     }
   }
 
-  $sql = "SELECT `id`,`name`,`price`,`image`,`url` FROM `products` WHERE $sqlStr;";
+  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url` FROM `products` WHERE $sqlStr;";
   try{
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){

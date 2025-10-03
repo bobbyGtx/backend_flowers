@@ -1,5 +1,6 @@
 <?php
-function cartToOrder($link, $result, $userCartItems, $lng=''){
+
+function cartToOrder($link, $result, $userCartItems, $languageTag=''){
   include 'variables.php';
   $funcName = 'cartToOrder_func';
 
@@ -26,7 +27,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     }
   }
 
-  $sql = "SELECT `id`,`name`,`name_en`,`name_de`,`price`,`count`,`disabled` FROM `products` WHERE $sqlStr;";
+  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`count`,`disabled` FROM `products` WHERE $sqlStr;";
   try{
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -39,14 +40,14 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     if ($result['error']){goto endFunc;}
     else{
       if (count($userCartItems)>0){
-        $result = updateUserCart($link, $result, $userId, NULL);
+        $result = updateUserCart($link, $result, $userId, NULL,NULL,NULL);
         if (!$result['error']){
           $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
         } else {goto endFunc;}
       }
       $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
     }
-  }
+  }//Если товары из карзины не найдены в БД, чистим карзину
   
   $rows = mysqli_fetch_all($sqlResult,MYSQLI_ASSOC);//парсинг 
 
@@ -56,7 +57,7 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
     foreach($rows as $product){
       $newProducts[]=['quantity'=>$quantities[$product['id']],'productId'=>$product['id']];
     }
-    $result = updateUserCart($link, $result, $userId, $newProducts);
+    $result = updateUserCart($link, $result, $userId, $newProducts, NULL, time());
     unset($newProducts);
   }
   $products=[]; 
@@ -92,7 +93,6 @@ function cartToOrder($link, $result, $userCartItems, $lng=''){
   endFunc:
   return $result;
 }
-
 //Перенести в продуктс ОП если он будет
 function updateProductsCounts($link, $result, $updatesProducts){
   //Функция автоматом дизейблит товар, когда его кол-во на складе = 0
@@ -212,7 +212,7 @@ function createOrder($link, $result, $order){
   return $result;
 }//добавление заказа в таблицу
 
-function getOrder($link, $result, $orderId, $lng='ru'){
+function getOrder($link, $result, $orderId, $languageTag=''){
   include 'scripts/variables.php';
   $funcName = 'getOrder_func';
   if (empty($result) || $result['error']){goto endFunc;}
@@ -222,9 +222,8 @@ function getOrder($link, $result, $orderId, $lng='ru'){
 
   $sql = "SELECT 
     orders.*,
-    delivery_types.deliveryType,delivery_types.deliveryType_en,delivery_types.deliveryType_de,delivery_types.addressNeed,
-    payment_types.paymentType,payment_types.paymentType_en,payment_types.paymentType_de,
-    statuses.statusName,statuses.statusName_en,statuses.statusName_de
+    delivery_types.deliveryType$languageTag as deliveryType,delivery_types.addressNeed,
+    payment_types.paymentType$languageTag as paymentType,statuses.statusName$languageTag as statusName
     FROM orders 
     LEFT OUTER JOIN statuses ON orders.status_id = statuses.id 
     LEFT OUTER JOIN delivery_types ON orders.deliveryType_id = delivery_types.id

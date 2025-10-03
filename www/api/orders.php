@@ -6,8 +6,8 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
-$requestheaders = array_change_key_case(getallheaders(), CASE_LOWER);
-$requestLanguage = $requestheaders['x-language'];
+include 'scripts/languageOp.php';
+$reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
@@ -96,12 +96,9 @@ if ($method === 'OPTIONS') {
     }
     
     //Запрос инфо о доставке и обработка ответа
-    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId']);
+    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'],$requestLanguage, true, true);
     if ($result['error']){goto endRequest;}
     $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
-    if (intval($selectedDelivery['disabled'])===1){
-      $result['error']=true; $result['code']=400; $result['message']=$infoErrors['delivNotPos'];
-    }//Проверка доступности выбранного метода доставки. 
     $needAddress = intval($selectedDelivery['addressNeed']);
   }
 
@@ -122,7 +119,7 @@ if ($method === 'OPTIONS') {
   } else {$address=null;}
 
   //Проверка правильности и доступности метода оплаты
-  $result = checkPayment($link,$result, $incOrder['paymentTypeId']);
+  $result = checkPayment($link,$result, $incOrder['paymentTypeId'],$reqLanguage);
   if ($result['error']){goto endRequest;}
 
   if (count($messages)>0) {
@@ -136,7 +133,7 @@ if ($method === 'OPTIONS') {
   $userCartItems = $result['userCartItems']; unset($result['userCartItems']);
 
 /*-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----*/
-  $result = cartToOrder($link,$result,$userCartItems,'ru');
+  $result = cartToOrder($link,$result,$userCartItems,$reqLanguage);
   if ($result['error']){goto endRequest;}
 
   $orderProducts = $result['products']; unset($result['products']);//Детализированный список продуктов в карзине
@@ -170,7 +167,7 @@ if ($method === 'OPTIONS') {
     goto endRequest;
   }
   //4) Сгенерировать ответ пользователю
-  $result = getOrder($link, $result, $newOrderId,$requestLanguage);
+  $result = getOrder($link, $result, $newOrderId,$reqLanguage);
   if ($result['error']) goto endRequest;
 
 
@@ -225,8 +222,7 @@ if ($method === 'OPTIONS') {
       }
   }//Если нет записи в таблице - создаем ответ и завершаем запрос
 
-  $row = mysqli_fetch_array($sqlResult);//парсинг 
-
+  $row = mysqli_fetch_assoc($sqlResult);//парсинг 
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';

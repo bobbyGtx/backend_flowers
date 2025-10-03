@@ -42,10 +42,15 @@ $errors['deliveryIdNotFound'] ='Delivery identifier not found! ';
 $errors['paymentIdNotFound'] ='Payment method identifier not found! '; 
 $errors['userIdNotFound'] = 'User ID not found in function! ';
 $errors['orderIdNotFound'] = 'Order ID not found in function! ';
+$errors['productIdNotFound'] = 'Product ID not found in function! ';
+$errors['quantityNotFound'] = 'Quantity not found in function! ';
+
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 $dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
 $dbError['recordNotFound'] = 'Requested Record not found! ';
+$dbError['recordsNotFound'] = 'Requested Records not found! ';
+$dbError['connectionError'] = 'DB connection Error! ';
 
 $errors['productNotFound'] = 'Product not found! ';
 $errors['productsNotFound'] = 'Products not found! ';
@@ -54,9 +59,20 @@ $errors['dataNotFound'] = 'No data was passed to the function or it was incorrec
 $errors['cartEmpty'] = 'Critical error! User cart empty! ';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
+$errors['dataNotAcceptable'] = 'Data not Acceptable!';
 
 $dataErr['notRecognized'] = 'Request parameters not recognized! ';
 $dataErr['dataInFunc'] = 'Error in data passed to the function! ';
+
+$critErr['userDNotFound'] ='Critical error! User data not found in record. ';
+$critErr['userIdNotFound'] ='Critical error! User ID not found in record. ';
+
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
 $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
+$infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
+$infoErrors['nothingToChange'] = 'Nothing to change! ';
+
+
+$infoMessages['reqSuccess'] = 'Request success!';
+$infoMessages['recordChanged'] = 'Record changed!';

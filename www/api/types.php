@@ -6,6 +6,8 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
+include 'scripts/languageOp.php';
+$reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
@@ -21,7 +23,7 @@ if ($method === 'OPTIONS') {
   }
 
   // запрос категорий
-  $sql= "SELECT `id`,`name`,`url` FROM `categories`;";
+  $sql= "SELECT `id`,`name$reqLanguage` as `name`,`url` FROM `categories`;";
   $sqlResult = mysqli_query($link, $sql);
   $numRows = mysqli_num_rows($sqlResult);
   if ($numRows === 0) {
@@ -34,7 +36,7 @@ if ($method === 'OPTIONS') {
   }//преобразование массива для подстановки по ключу
 
   //запрос типов
-  $sql= "SELECT `id`,`name`,`url`,`category_id` FROM `types`;";
+  $sql= "SELECT `id`,`name$reqLanguage` as `name`,`url`,`category_id` FROM `types`;";
   $sqlResult = mysqli_query($link, $sql);
   $numRows = mysqli_num_rows($sqlResult);
   if ($numRows === 0) {

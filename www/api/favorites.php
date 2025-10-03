@@ -6,6 +6,8 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
+include 'scripts/languageOp.php';
+$reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
@@ -13,7 +15,8 @@ if ($method === 'OPTIONS') {
 } elseif ($method === 'POST') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
-
+  include 'scripts/favoritesOp.php';
+  include 'scripts/productsOp.php';
   $result = ['error' => false, 'code' => 200, 'message' => 'Addet to favorites'];//Создание массива с ответом Ок
 
   //{"productId": "638672d5257c18cd625190ea"}
@@ -41,30 +44,19 @@ if ($method === 'OPTIONS') {
   }
 
   //ищем инфо о товаре в базе для проверки наличия в базе и ответа
-  $sql = "SELECT `id`,`name`,`price`,`image`,`url` FROM `products` WHERE `id` = $postProductId;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($emessage))";goto endRequest;
-  }
+  $result = getProductInfo($link, $result, $postProductId, $reqLanguage);
+  if ($result['error']) goto endRequest;
 
-  if (mysqli_num_rows($sqlResult)===0){$result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'];}
-  $row = mysqli_fetch_array($sqlResult);//парсинг строки
+  $row = $result['row']; unset($result['row']);
   $product['id'] = $row['id'];
-  $product['name'] =$row['name'];
-  $product['price'] =$row['price'];
-  $product['image'] =$row['image'];
-  $product['url'] =$row['url'];
+  $product['name'] = $row['name'];
+  $product['price'] = $row['price'];
+  $product['image'] = $row['image'];
+  $product['url'] = $row['url'];
 
   //Добавление записи в избранное
-  $sql = "INSERT INTO `favorites`(`user_id`, `product_id`, `addDate`) VALUES ($userId, $postProductId,".time().");";
-  try{
-  $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($emessage))";goto endRequest;
-  }
+  $result = addToFavorite($link,$result,$userId, $postProductId);
+  if ($result['error']) goto endRequest;
 
   $result['product'] = $product;
 
@@ -79,6 +71,8 @@ if ($method === 'OPTIONS') {
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
   include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/favoritesOp.php';
+  $reqName = 'Favorites [GET]';
   $result = ['error' => false, 'code' => 200, 'message' => 'Request success!'];//Создание массива с ответом Ок
   //{"productId": "638672d5257c18cd625190ea"}
   
@@ -94,68 +88,24 @@ if ($method === 'OPTIONS') {
       $userPwd = $result['userPassword'];
       unset($result['userId']); unset($result['userPassword']);
     }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userIdNotFound']."($reqName)"; goto endRequest;
     }
   }
 
   //составляем список избранного для пользователя
-  $sql = "SELECT `id`,`product_id` FROM `favorites` WHERE `user_id` = $userId";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($emessage))";goto endRequest;
-  }
-  if (mysqli_num_rows($sqlResult)===0){$result['favorites'] = []; goto endRequest;}
+  $result = getUserFavorites($link,$result, $userId);
+  if ($result['error']) goto endRequest;
+  $favoriteList = $result['favoriteList']; unset($result['favoriteList']);
 
-  $rows = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//парсинг строк
   //Подготовка запроса информации всех товаров из корзины пользователя
-  $sqlStr='';//Переменная для создания условия запроса (всё что после WHERE) 
-  $j=0;
-  $quantities=[];
-  foreach($rows as $value){
-    $itemID = $value['product_id'];
-    settype($itemID, 'integer');
-    if (preg_match('/^[0-9]+$/', $itemID)){
-      if ($j===0){
-        $sqlStr="`id`= $itemID";
-      }else{
-        $sqlStr=$sqlStr." OR `id`= $itemID";
-      }
-      $j++;
-    }
-  }
-
-  $sql = "SELECT `id`,`name`, `price`, `image`, `url`, `count`,`disabled` FROM `products` WHERE $sqlStr;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($emessage))";
-    goto endRequest;
-  }
-
-  if (mysqli_num_rows($sqlResult)===0){
-    $result['error']=true; $result['code']=500; $result['message']=$errors['productsNotFound']; $result['favorites'] = [];goto endRequest;
-  }// Если мы делали запрос, то избранное должно быть.
-
-  $productsList = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//парсинг строк
-  //$productsList = json_decode($rows,true);//парсинг строк
-
-  foreach($productsList as &$item){
-    if (intval($item['count'])<$endsCount){
-      $item['ends'] = true;
-    }else{
-      $item['ends'] = false;
-    }
-  }
-
-  $result['favorites'] =$productsList;
+  $result = generateFavList($link,$result, $favoriteList, $reqLanguage);//вывод списка в переменной $result['favorites']
+  if ($result['error']) goto endRequest;
   
 } elseif ($method === 'DELETE'){
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
-  //{"productId": "638672d5257c18cd625190ea"}
+  include 'scripts/favoritesOp.php';
+  //{"productId": "12"}
   $result = ['error' => false, 'code' => 200, 'message' => 'Record deleted'];//Создание массива с ответом Ок
 
   //Обработка входных данных
@@ -169,6 +119,7 @@ if ($method === 'OPTIONS') {
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
 
   $result = checkToken($link, $result, getallheaders(),true);
+
   if ($result['error']) {
     goto endRequest;//Если пришла ошибка - завршаем скрипт
   } else {
@@ -181,13 +132,7 @@ if ($method === 'OPTIONS') {
     }
   }
 
-  $sql = "DELETE FROM `favorites` WHERE `user_id` = $userId AND `product_id` = $delProductId ;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['delReqRejected'] . "($emessage))";goto endRequest;
-  }
+  $result = delFromFavorite($link, $result, $userId, $delProductId);
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }

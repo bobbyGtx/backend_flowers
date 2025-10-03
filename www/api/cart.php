@@ -5,7 +5,10 @@ header("Access-Control-Allow-Methods: OPTIONS, POST, GET, DELETE");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
+
 $method = $_SERVER['REQUEST_METHOD'];
+include 'scripts/languageOp.php';
+$reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
@@ -44,6 +47,11 @@ if ($method === 'OPTIONS') {
       $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
     }
   }
+
+  //Проверка товара перед добавлением в корзину
+  $result = checkProduct($link,$result,$postProductId,$postQuantity);
+  if ($result['error']){goto endRequest;}
+
   //Получение корзины пользователя
   $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
   try{
@@ -54,11 +62,19 @@ if ($method === 'OPTIONS') {
   }
   $numRows = mysqli_num_rows($sqlResult);
 
-  $userCartItems=0;
-  $userCartCreatedAt = 0;
-  $userCartUpdatedAt = 0;
+  $userCartItems=0;$userCartCreatedAt = 0;$userCartUpdatedAt = 0;
   $row = mysqli_fetch_array($sqlResult);//парсинг 
-  
+
+  if ($numRows > 1){
+    $result['error']=true; $result['code'] = 500; $result['message'] = 'Error! Multiple records were found in the database! (CartEdit)'; goto endRequest;
+  }//Если окажется более 1 карзины для пользователя в таблице корзины, то ошибка
+  if ($numRows === 0){
+    $userCartCreatedAt = time();
+    $userCartItems=[];
+    array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
+    $result = createUserCart($link, $result, $userId,$userCartItems);//Создание записи в таблице корзин, если такой не было
+    if ($result['error']){goto endRequest;}
+  }//Если записи карзины для этого пользователя в таблице нет, создаем запись и помещаем туда товар.
   if ($numRows === 1){
     $userCartCreatedAt = $row['createdAt'];
     $userCartUpdatedAt = $row['updatedAt'];
@@ -85,20 +101,12 @@ if ($method === 'OPTIONS') {
       $userCartCreatedAt = time();
       array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
     }
-    
-  }elseif ($numRows === 0){
-    $result = createUserCart($link, $result, $userId);//Создание записи в таблице корзин, если такой не было
-    if ($result['error']){goto endRequest;}
-    $userCartCreatedAt = time();
-    $userCartItems=[];
-    array_push($userCartItems,['productId' => $postProductId,'quantity' => $postQuantity]);
-  }else{
-    $result['error']=true; $result['code'] = 500; $result['message'] = 'Error! Multiple records were found in the database! (CartEdit)'; goto endRequest;
-  }
-  $result = updateUserCart($link, $result, $userId, $userCartItems, $userCartCreatedAt, $userCartUpdatedAt);
-  $userCartItemsSQL = json_encode($userCartItems);
+    $result = updateUserCart($link, $result, $userId, $userCartItems, $userCartCreatedAt, $userCartUpdatedAt);
+  }//Если запись корзины найдена, то редактируем её
 
-$result = compileUserCart($link,$result,$userCartItems, $userId );
+  
+$userCartItemsSQL = json_encode($userCartItems);
+$result = compileUserCart($link,$result,$userCartItems, $userId, $reqLanguage);
 
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
@@ -214,7 +222,7 @@ $result = compileUserCart($link,$result,$userCartItems, $userId );
     $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
     if (count($userCartItems)===0) {goto endRequest;}
   }
-  $result = compileUserCart($link, $result,$userCartItems, $userId);
+  $result = compileUserCart($link, $result,$userCartItems, $userId,$reqLanguage);
   if ($result['error']){goto endRequest;}
   
 

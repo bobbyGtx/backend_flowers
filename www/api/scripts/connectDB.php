@@ -20,7 +20,7 @@ function dbConnect()
   }
   if ($result['error'] == false && $link) {
     mysqli_set_charset($link, "utf8mb4");//Кодировка БД
-    //mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);// Включаем генерацию ошибок для нормальной работы try catch
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);// Включаем генерацию ошибок для нормальной работы try catch
     $result['link'] = $link;
   }
   return $result;
