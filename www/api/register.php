@@ -6,7 +6,7 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
-
+include 'scripts/variables.php';//файл с генераторами строк
 
 if ('OPTIONS' === $method) {
   http_response_code(200);//ответ на пробный запрос
@@ -21,12 +21,12 @@ if ('OPTIONS' === $method) {
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
   }
 
   $settings = getSettings($link);//Получение ключа шифрования. 
   if ($settings == false) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = 'Error while requesting settings from DB'; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endRequest;
   }
 
   $key = $settings['secretKey'];//ключ шифрования паролей
@@ -83,7 +83,7 @@ if ('OPTIONS' === $method) {
   mysqli_stmt_close($stmt);
   } catch (Exception $e){
     $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. ($emessage))";goto endRequest;
+    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($emessage))";goto endRequest;
   }
 
   if (empty($newUserId) && $newUserId<1){
@@ -97,7 +97,7 @@ if ('OPTIONS' === $method) {
   }
    
 }else {
-  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+  $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
 
 endRequest:

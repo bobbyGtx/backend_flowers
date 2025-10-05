@@ -59,6 +59,53 @@ function getUserInfo($link, $result, $userId, $languageTag = ''){
   return $result;
 }//Получение информации о пользователе. Возвращает данные в $result['user']
 
+function login($link, $result, $login, $pass){
+   include 'variables.php';
+   $funcName = 'login'.'_func';
+
+   if (empty($result) || $result['error']){goto endFunc;}
+   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+   if (empty($pass) || empty($login) ) {
+      $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized'] . "($funcName)"; goto endFunc;
+   }
+
+   //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД.
+   if (!preg_match($emailRegEx, $login) || !preg_match($passwordRegEx, $pass)) {
+      $result['error']=true; $result['code'] = 400; $result['message'] = $authError['loginOrPassNA'] . "($funcName)"; goto endFunc;
+   } 
+
+   $settings = getSettings($link);//Получение ключа шифрования. 
+   if ($settings == false) {
+      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endFunc;
+   }
+   $key = $settings['secretKey'];//ключ шифрования паролей
+   $passwordEnc = __encode($pass, $key);//шифрование пароля
+
+   $sql = "SELECT `id`,`firstName`,`lastName`,`email`,`password`,`emailVerification`,`blocked`  FROM users WHERE email = '" . $login . "' AND `password` = '" . $passwordEnc . "'";
+   try{
+      $sqlResult = mysqli_query($link, $sql);
+   } catch (Exception $e){
+      $emessage = $e->getMessage();
+      $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+   }
+  
+   $numRows = mysqli_num_rows($sqlResult);
+   if ($numRows <> 1) {
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['loginOrPassNC']; goto endFunc;
+   }
+   $row = mysqli_fetch_assoc($sqlResult);//парсинг
+   if (empty($row['id']) || empty($row['email']) || empty($row['password'])) {
+      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['recognizeUnableDB']; goto endFunc;
+   }
+   if(boolval($row['blocked'])===true){
+      $result['error']=true; $result['code'] = 403; $result['message'] = $infoMessages['userBlocked']; goto endFunc;
+   }
+   $result['user'] = ['userId'=>$row['id'],'firstName'=>$row['firstName'],'lastName'=>$row['lastName']];
+
+   endFunc:
+   return $result;
+}//Запрос из таблицы пользователей Возвращает данные в $result['user'] = userId, firstName, lastName
+
 function updateUserData($link, $result, $userId, $newData){
    include 'variables.php';
    $funcName = 'updateUserData'.'_func';

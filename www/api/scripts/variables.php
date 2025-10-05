@@ -73,6 +73,9 @@ $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
 $infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change! ';
 
+$authError['loginOrPassNC'] ='Login or password not correct! ';
+$authError['loginOrPassNA'] ='Login or password not acceptable! ';
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['recordChanged'] = 'Record changed!';
+$infoMessages['userBlocked'] = 'User blocked! ';

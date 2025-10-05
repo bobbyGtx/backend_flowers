@@ -2,7 +2,7 @@
 //Создание корзины пользователю
 function createUserCart($link,$result, $userId, $products = NULL){
   include 'variables.php';
-  $funcName = 'createUserCart_func';
+  $funcName = 'createUserCart'.'_func';
   if ($result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
@@ -15,13 +15,12 @@ function createUserCart($link,$result, $userId, $products = NULL){
     $products = 'NULL';
   }
 
-  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', '$products', $createdAt, NULL);";
-  $result['sql']= $sql;
+  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', $products, $createdAt, NULL);";
   try{
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
     $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserOp->createUserCart) ($emessage))";goto endFunc;
+    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($funcName) ($emessage))";goto endFunc;
   }
   
   endFunc:
@@ -30,7 +29,7 @@ function createUserCart($link,$result, $userId, $products = NULL){
 
 function checkProduct(mysqli $link, array $result, int $productId, int $quantity){
   include 'variables.php';
-  $funcName = 'checkProducts_func';
+  $funcName = 'checkProducts'.'_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
@@ -233,7 +232,7 @@ function getCart($link, $result, $userId){
 
 function clearUserCart($link, $result, $userId){
   include 'variables.php';
-  $funcName = 'clearUserCart_func';
+  $funcName = 'clearUserCart'.'_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}

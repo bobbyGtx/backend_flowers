@@ -2,7 +2,7 @@
 //Проверка токена на валидность. userData - флаг для возврата идентификатора пользователя и пароля
 function checkToken($link, $result, $http_Headers,$userData = false){
    include 'variables.php';
-   $funcName = 'checkToken_func';
+   $funcName = 'checkToken'.'_func';
    $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
    $http_AccessToken = $http_Headers[$accessTokenHeader];
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
@@ -35,4 +35,37 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    }
    return $result;
 }
+
+function generateTokens($link, $result, $userId){
+   include 'variables.php';
+   $funcName = 'generateTokens'.'_func';
+   if (empty($result) || $result['error']){goto endFunc;}
+   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+   
+   $accessToken = generate_string($accTokenLenght);//Генерация accessToken согласно длины из настроек
+   if (!$accessToken || strlen($accessToken)<>$accTokenLenght){
+      $result['error']=true; $result['code']=500; $result['message']="Critical error! Problem with accessToken Generation($funcName)";goto endFunc;
+   }//проверка наличия токена
+   $refreshToken = generate_string($refrTokenLenght);//Генерация refreshToken согласно длины из настроек
+   if (!$refreshToken || strlen($refreshToken)<>$refrTokenLenght){
+      $result['error']=true; $result['code']=500; $result['message']="Critical error! Problem with refreshToken Generation($funcName)";goto endFunc;
+   }//проверка наличия токена
+   $nowTimeStamp = time();
+   $accessTokenEndTime = $nowTimeStamp + $accTokenLife;//конечная дата действия токена
+   $refreshTokenEndTime = $nowTimeStamp + $refrTokenLife;//конечная дата действия токена
+
+   $sql = "UPDATE $userTableName SET `$accTokenField` = '" . $accessToken . "', `$accTokenLifeField` = '" . $accessTokenEndTime . "', `$refreshTokenField` = '" . $refreshToken . "' ,`$refrTokenLifeField` = '" . $refreshTokenEndTime . "' WHERE `$userTableName`.`id` = " . $userId;
+   try{
+      $sqlResultSaveTokens = mysqli_query($link, $sql);//сохраняем токены и даты
+   } catch (Exception $e){
+      $emessage = $e->getMessage();
+      $result['error']=true; $result['code']=500; $result['message']=$errors['updReqRejected'] . "($funcName)($emessage))";goto endFunc;
+   }
+
+   $result['tokens'] = ['accessToken' => $accessToken, 'refreshToken' => $refreshToken];
+
+   endFunc:
+   return $result;
+}//Генерация и сохранение токенов в БД. Возвращает данные в $result['tokens']
 
