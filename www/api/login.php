@@ -38,15 +38,14 @@ if ('OPTIONS' === $method) {
 
   $result = login($link, $result, $loginPost, $passwordPost);
   if ($result['error']) goto endRequest;
-  $user = $result['user'];
   
-  $userId = $user['userId'];
+  $userId = $result['user']['userId'];
 
   $result = generateTokens($link, $result, $userId);
   if ($result['error']) goto endRequest;
   $tokens = $result['tokens'];unset($result['tokens']);
 
-  $result['user'] =$result['user']+$tokens;
+  $result['user'] +=$tokens;
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
