@@ -41,7 +41,7 @@ function generateTokens($link, $result, $userId){
    $funcName = 'generateTokens'.'_func';
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+   if (!$userId) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
    
    $accessToken = generate_string($accTokenLenght);//Генерация accessToken согласно длины из настроек
    if (!$accessToken || strlen($accessToken)<>$accTokenLenght){
@@ -63,9 +63,73 @@ function generateTokens($link, $result, $userId){
       $result['error']=true; $result['code']=500; $result['message']=$errors['updReqRejected'] . "($funcName)($emessage))";goto endFunc;
    }
 
-   $result['tokens'] = ['accessToken' => $accessToken, 'refreshToken' => $refreshToken];
+   $result['tokens'] = ['accessToken' => $accessToken, 'refreshToken' => $refreshToken, 'userId' => $userId];
 
    endFunc:
    return $result;
 }//Генерация и сохранение токенов в БД. Возвращает данные в $result['tokens']
 
+function checkRefreshToken($link, $result, $refreshToken){
+   include 'variables.php';
+   $funcName = 'checkRefreshToken'.'_func';
+   if (empty($result) || $result['error']){goto endFunc;}
+   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+   if (empty($refreshToken) || !preg_match($refreshTokenRegEx, $refreshToken)) {
+    $result['error']=true; $result['code'] = 401; $result['message'] = $dataErr['notRecognized'];goto endFunc;
+   }
+
+   $sql = "SELECT `id`,`$refreshTokenField`,`$refrTokenLifeField` FROM `$userTableName` WHERE `$refreshTokenField` = '" . $refreshToken . "'";
+   try{
+      $sqlSelRecord = mysqli_query($link, $sql);//выполняем запрос
+   } catch (Exception $e){
+      $emessage = $e->getMessage();
+      $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+   }
+  
+   $numRows = mysqli_num_rows($sqlSelRecord);
+   if ($numRows <> 1) {
+    $result['error']=true; $result['code'] = 401; $result['message'] = $authError['refrTokenInvalid'];goto endFunc;
+   }//Совпадений в базе не найдено
+
+   $record = mysqli_fetch_assoc($sqlSelRecord);//парсинг
+   $userId = $record['id'];
+   $refreshToken = $record[$refreshTokenField];
+   $refrTokenTime = $record[$refrTokenLifeField];
+   if (empty($userId) || empty($refreshToken)) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['recognizeUnableDB']."($funcName)";goto endFunc;
+   }
+   if ((time() - $refrTokenTime) > 0) {
+    $result = clearTokens($link, $result, $userId);
+    if ($result['error'])goto endFunc;//если ошибка пришла из функции - прокидываем её
+    $result['error']=true; $result['code'] = 401; $result['message'] = $authError['refrTokenOutOfDate'];goto endFunc;
+   }//рефреш токен просрочен. Удаляем токены из базы
+
+   if (!empty($userId) && intval($userId) > 0) {
+      $result['userId'] = $userId;
+   }else{
+      $result['error']=true; $result['code'] = 401; $result['message'] = $errors['outputtingFuncError']."($funcName)";goto endFunc;
+   }
+
+
+   endFunc:
+   return $result;
+}//Проверка refresh token. Выводит $result['userId']
+
+function clearTokens($link, $result, $userId){
+   include 'variables.php';
+   $funcName = 'clearTokens'.'_func';
+   if (empty($result) || $result['error']){goto endFunc;}
+   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+   if (!$userId) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+
+   try{
+      $sqlClearTokensRequest = "UPDATE `$userTableName` SET `$accTokenField` = '', `$accTokenLifeField` = '', `$refreshTokenField` = '' ,`$refrTokenLifeField` = '' WHERE `$userTableName`.`id` = " . $userId;
+      $sqlSelRecord = mysqli_query($link, $sqlClearTokensRequest);//выполняем запрос
+   } catch (Exception $e){
+      $emessage = $e->getMessage();
+      $result['error']=true; $result['code']=500; $result['message']=$errors['updReqRejected'] . "($funcName) ($emessage))";goto endFunc;
+   }
+   
+   endFunc:
+   return $result;
+}//удаление токенов у пользователя

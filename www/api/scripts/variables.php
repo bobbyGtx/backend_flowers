@@ -77,6 +77,8 @@ $infoErrors['nothingToChange'] = 'Nothing to change! ';
 
 $authError['loginOrPassNC'] ='Login or password not correct! ';
 $authError['loginOrPassNA'] ='Login or password not acceptable! ';
+$authError['refrTokenInvalid'] = 'Refresh token invalid! ';
+$authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['recordChanged'] = 'Record changed!';

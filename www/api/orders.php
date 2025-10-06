@@ -100,26 +100,20 @@ if ($method === 'OPTIONS') {
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
-
-  
   
   $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
   // Выключаем автокоммит. Начинаем транзакцию
   mysqli_autocommit($link, false);
-
   //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
   $result = updateProductsCounts($link, $result, $updatesProducts);if ($result['error']===true){goto endRequest;}//учет купленных продуктов в БД
   if ($result['error'])goto endTransaction;
-
   //2) Сохранить запись в orders
   $result = createOrder($link, $result, $order);
   if ($result['error'])goto endTransaction;
   $newOrderId = $result['newOrderId']; unset($result['newOrderId']);
-
   //Чистка корзины пользователя после успешного создания заказа
   $result = clearUserCart($link, $result, $userId);
   if ($result['error']) goto endTransaction; 
-
   endTransaction:
   if (!$result['error']){
     mysqli_commit($link);//сохраняем изменения транзакции, если нет ошибок
