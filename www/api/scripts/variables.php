@@ -44,6 +44,8 @@ $errors['userIdNotFound'] = 'User ID not found in function! ';
 $errors['orderIdNotFound'] = 'Order ID not found in function! ';
 $errors['productIdNotFound'] = 'Product ID not found in function! ';
 $errors['quantityNotFound'] = 'Quantity not found in function! ';
+$errors['outputtingFuncError'] = 'Error in outputting a variable from a function! ';
+
 
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';

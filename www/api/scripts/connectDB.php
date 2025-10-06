@@ -2,8 +2,7 @@
 //Подключение к БД
 include 'crypt.php';
 include 'variables.php';
-function dbConnect()
-{
+function dbConnect(){
   include 'variables.php';
   $result = ['error' => false, 'message' => 'Connected!', 'link' => null];
   $dbSettings = file_get_contents($settingsFile);//Чтение файла в переменную

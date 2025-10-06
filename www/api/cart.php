@@ -7,6 +7,7 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 
 $method = $_SERVER['REQUEST_METHOD'];
+include 'scripts/variables.php';
 include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
@@ -252,7 +253,7 @@ $result = compileUserCart($link,$result,$userCartItems, $userId, $reqLanguage);
   if ($result['error']) goto endRequest; //на всякий случай
 
 } else {
-  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+  $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
 
 endRequest:

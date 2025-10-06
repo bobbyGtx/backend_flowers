@@ -6,6 +6,7 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
+include 'scripts/variables.php';
 include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
@@ -21,6 +22,7 @@ if ($method === 'OPTIONS') {
   include 'scripts/orderOp.php';
   include 'scripts/sqlOp.php';
   /*
+
   {
     "deliveryType": "self",
     "firstName": "Владимир",
@@ -48,91 +50,48 @@ if ($method === 'OPTIONS') {
   "comment": "вава"
   }
    */
+
   //Ошибки
+
   /*
   400 - доставка не возможна
   406 - Not Acceptable (основной запрос не содержит некоторых данных!)(Не достаточно товаров на складе. cartOp_func), 
   500 - ошибки входящих данных в функции
    */
-  
+
   $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
-  //Обработка входных данных
+  
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
-  $messages = [];//Массив для ошибок
-  $incOrder = [];//Переменная для сбора входящих данных заказа
-  if (!empty($postDataJson['deliveryType']) && intval($postDataJson['deliveryType'])>0){
-    $incOrder['deliveryTypeId'] = intval($postDataJson['deliveryType']);
-  } else {$result['error']=true; $messages[] = 'Invalid deliveryType';}
-  if (!empty($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))){
-    $incOrder['firstName']=$postDataJson['firstName'];
-  } else {$result['error']=true; $messages[] = 'Invalid First Name!';}
-  if (!empty($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))){
-    $incOrder['lastName']=$postDataJson['lastName'];
-  } else {$result['error']=true; $messages[] = 'Invalid Last Name!';}
-  if (!empty($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))){
-    $incOrder['phone']=$postDataJson['phone'];
-  } else {$result['error']=true; $messages[] = 'Invalid Phone!';}
-  if (!empty($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))){
-    $incOrder['email']=$postDataJson['email'];
-  } else {$result['error']=true; $messages[] = 'Invalid Email!';}
-  if (!empty($postDataJson['paymentType']) && intval($postDataJson['paymentType'])>0){
-    $incOrder['paymentTypeId'] = intval($postDataJson['paymentType']);
-  } else {$result['error']=true; $messages[] = 'Invalid Payment Type';}
-  if (!empty($postDataJson['comment'])){$incOrder['comment']=$postDataJson['comment'];}
-//Обязательные параметры проверены. Подключаемся к базе и проверяем токен для проверки остальных
-  if (!$result['error']){
-    $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
-    if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
-    $result = checkToken($link, $result, getallheaders(),true);
-    if ($result['error']) {goto endRequest;}
-    else {
-      if ($result['userId'] && $result['userPassword']){
-        $userId = $result['userId'];unset($result['userId']);
-        $userPwd = $result['userPassword'];unset($result['userPassword']);
-      }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-      }//Проверка наличия логина и пароля
-    }
-    
-    //Запрос инфо о доставке и обработка ответа
-    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'],$requestLanguage, true, true);
-    if ($result['error']){goto endRequest;}
-    $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
-    $needAddress = intval($selectedDelivery['addressNeed']);
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {goto endRequest;}
+  else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];unset($result['userId']);
+      $userPwd = $result['userPassword'];unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userDNotFound']; goto endRequest;
+    }//Проверка наличия логина и пароля
   }
 
-  //Проверка адреса если она необходима по доставке
-  $address=[];
-  if ($needAddress){
-    if (!empty($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))){
-      $address['zip']=$postDataJson['zip'];
-    } else {$result['error']=true; $messages[] = 'Invalid ZIP Code';}
-    if (!empty($postDataJson['region']) && in_array($postDataJson['region'], $regionsD)){
-      $address['region']=$postDataJson['region'];
-    } else {$result['error']=true; $messages[] = 'Invalid Region';}
-    if (!empty($postDataJson['city'])){$address['city']=$postDataJson['city'];} else {$result['error']=true; $messages[] = 'Invalid Сity!';}
-    if (!empty($postDataJson['street'])){$address['cistreetty']=$postDataJson['street'];} else {$result['error']=true; $messages[] = 'Invalid Street!';}
-    if (!empty($postDataJson['house'])){$address['house']=$postDataJson['house'];} else {$result['error']=true; $messages[] = 'Invalid House!';}
-    if (!empty($postDataJson['entrance'])){$address['entrance']=$postDataJson['entrance'];}
-    if (!empty($postDataJson['apartment'])){$address['apartment']=$postDataJson['apartment'];}
-  } else {$address=null;}
-
-  //Проверка правильности и доступности метода оплаты
-  $result = checkPayment($link,$result, $incOrder['paymentTypeId'],$reqLanguage);
-  if ($result['error']){goto endRequest;}
-
-  if (count($messages)>0) {
-    $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
-  }//Если есть ошибки данных - выводим их
- 
-  //Начинаем обработку карзины пользователя
-/*-----Получение списка товаров в корзине пользователя-----*/
+//-----Обработка входных данных-----
+  $result = prepareOrderData($link, $result,$reqLanguage, $postDataJson);
+  if ($result['error']) goto endRequest;
+  $incOrder = $result['incOrder']; unset($result['incOrder']);
+  
+  $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
+  if ($result['address']){$address = $result['address']; unset($result['address']);}
+  
+//-----Начинаем обработку карзины пользователя-----
+//-----Получение списка товаров в корзине пользователя-----
   $result = getCart($link, $result, $userId); //true возвращает объект как массив
   if ($result['error']){goto endRequest;}
   $userCartItems = $result['userCartItems']; unset($result['userCartItems']);
 
-/*-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----*/
+//-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----
   $result = cartToOrder($link,$result,$userCartItems,$reqLanguage);
   if ($result['error']){goto endRequest;}
 
@@ -141,8 +100,10 @@ if ($method === 'OPTIONS') {
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
-  $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
 
+  
+  
+  $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
   // Выключаем автокоммит. Начинаем транзакцию
   mysqli_autocommit($link, false);
 
@@ -225,7 +186,7 @@ if ($method === 'OPTIONS') {
   $row = mysqli_fetch_assoc($sqlResult);//парсинг 
 
 } else {
-  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+  $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
 
 endRequest:

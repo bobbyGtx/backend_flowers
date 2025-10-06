@@ -310,3 +310,90 @@ function getOrder($link, $result, $orderId, $languageTag=''){
     "totalAmount": 76
 }*/
 }//получение информации о заказах
+
+function prepareOrderData($link, $result, $reqLanguage, $postDataJson){
+  include 'scripts/variables.php';
+  include 'deliveryOp';
+  $funcName = 'prepareOrderData'.'_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$postDataJson || !is_array($postDataJson) || count($postDataJson)<1) {$result['error']=true; $result['message'] = $dataErr['notRecognized'] . "($funcName)"; goto endFunc;}
+  
+  $messages = [];//Массив для ошибок
+  $incOrder = [];//Переменная для сбора входящих данных заказа
+  if (!empty($postDataJson['deliveryType']) && intval($postDataJson['deliveryType'])>0){
+    $incOrder['deliveryTypeId'] = intval($postDataJson['deliveryType']);
+  } else {$result['error']=true; $messages[] = 'Invalid deliveryType';}
+  if (!empty($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))){
+    $incOrder['firstName']=$postDataJson['firstName'];
+  } else {$result['error']=true; $messages[] = 'Invalid First Name!';}
+  if (!empty($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))){
+    $incOrder['lastName']=$postDataJson['lastName'];
+  } else {$result['error']=true; $messages[] = 'Invalid Last Name!';}
+  if (!empty($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))){
+    $incOrder['phone']=$postDataJson['phone'];
+  } else {$result['error']=true; $messages[] = 'Invalid Phone!';}
+  if (!empty($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))){
+    $incOrder['email']=$postDataJson['email'];
+  } else {$result['error']=true; $messages[] = 'Invalid Email!';}
+  if (!empty($postDataJson['paymentType']) && intval($postDataJson['paymentType'])>0){
+    $incOrder['paymentTypeId'] = intval($postDataJson['paymentType']);
+  } else {$result['error']=true; $messages[] = 'Invalid Payment Type';}
+  if (!empty($postDataJson['comment'])){$incOrder['comment']=$postDataJson['comment'];}
+//------------Проверка доставки------------
+  if (!$result['error']){
+    //Запрос инфо о доставке и обработка ответа
+    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'],$requestLanguage, true, true);
+    if ($result['error']){goto endFunc;}
+    $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
+    $needAddress = intval($selectedDelivery['addressNeed']);
+  }//Делаем доп запросы только если нет ошибок
+
+  //Проверка адреса если она необходима по доставке
+  $address=[];
+  if ($needAddress){
+    if (!empty($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))){
+      $address['zip']=$postDataJson['zip'];
+    } else {$result['error']=true; $messages[] = 'Invalid ZIP Code';}
+    if (!empty($postDataJson['region']) && in_array($postDataJson['region'], $regionsD)){
+      $address['region']=$postDataJson['region'];
+    } else {$result['error']=true; $messages[] = 'Invalid Region';}
+    if (!empty($postDataJson['city'])){$address['city']=$postDataJson['city'];} else {$result['error']=true; $messages[] = 'Invalid Сity!';}
+    if (!empty($postDataJson['street'])){$address['cistreetty']=$postDataJson['street'];} else {$result['error']=true; $messages[] = 'Invalid Street!';}
+    if (!empty($postDataJson['house'])){$address['house']=$postDataJson['house'];} else {$result['error']=true; $messages[] = 'Invalid House!';}
+    if (!empty($postDataJson['entrance'])){$address['entrance']=$postDataJson['entrance'];}
+    if (!empty($postDataJson['apartment'])){$address['apartment']=$postDataJson['apartment'];}
+  } else {$address=null;}
+
+  //Если есть ошибки данных - выводим их
+  if (count($messages)>0) {
+    $result['code'] = 406;$result['message'] = $errors['dataNotAcceptable'] . "($funcName)"; 
+    $result['messages'] = $messages; goto endFunc;
+  }
+
+//------------Проверка доступности метода оплаты------------
+  $result = checkPayment($link,$result, $incOrder['paymentTypeId'],$reqLanguage);
+  if ($result['error']){goto endFunc;}
+
+//------------Вывод данных------------
+  if(is_array($incOrder) && count($incOrder)>0){
+    $result['incOrder'] = $incOrder;
+  }else{
+    $result['error'] = true; $result['code'] = 500; 
+    $result['message'] = $errors['outputtingFuncError'] . "[incOrder]($funcName)";
+  }//Перед выводом проверяем переменную
+  if(is_array($selectedDelivery) && count($selectedDelivery)>0){
+    $result['selectedDelivery'] = $selectedDelivery;
+  }else{
+    $result['error'] = true; $result['code'] = 500; 
+    $result['message'] = $errors['outputtingFuncError'] . "[selectedDelivery]($funcName)";
+  }//Перед выводом проверяем переменную
+
+  if (is_array($address) && count($address)> 0)$result['address'] = $address;
+
+
+  endFunc:
+  return $result;
+  //error 406: unacceptable format
+
+}//Проверка входящих данных и подготовка

@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
@@ -26,7 +26,13 @@ if ($method === 'OPTIONS') {
   }
 
   $sql= "SELECT `id`,`name$reqLanguage` as `name`,`url` FROM `categories`;";
-  $sqlResult = mysqli_query($link, $sql);
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($reqName) ($emessage))";goto endRequest;
+  }
+  
   $numRows = mysqli_num_rows($sqlResult);
   if ($numRows === 0) {
     $result['error']=true; $result['code'] = 400; $result['message'] = $dbError['recordsNotFound'] . " ($reqName)"; goto endRequest;
