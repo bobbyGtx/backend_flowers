@@ -97,6 +97,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
 
     //---------сортировка price-asc,price-desc,name-asc,name-desc
     if (!empty($sort)){
+      $sort = strtolower($sort);
       switch($sort){
         case "price-asc":
           $sortSQL = " ORDER BY p.price ASC";
@@ -117,7 +118,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     }
 
     if(count($filters) > 0){
-      $filterSQL = ' WHERE ' .implode("AND", $filters);
+      $filterSQL = ' WHERE ' .implode(" AND ", $filters);
     }
     
   }//Обработка параметров запроса
