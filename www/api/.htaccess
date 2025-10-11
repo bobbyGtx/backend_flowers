@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Если запрос ровно /api/products или /api/products/
+RewriteRule ^products/?$ products.php [L,QSA]
+
+# Если запрос /api/products/что-то
+RewriteRule ^products/([^/]+)/?$ products.php?slug=$1 [L,QSA]

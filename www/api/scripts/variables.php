@@ -63,8 +63,9 @@ $errors['cartEmpty'] = 'Critical error! User cart empty! ';
 $errors['MethodNotAllowed']='Method Not Allowed';
 $errors['dataNotAcceptable'] = 'Data not Acceptable!';
 
-$dataErr['notRecognized'] = 'Request parameters not recognized! ';
+$dataErr['notRecognized'] = 'Request parameters not recognized! ';//Code 400
 $dataErr['dataInFunc'] = 'Error in data passed to the function! ';
+$dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized! ';
 
 $critErr['userDNotFound'] ='Critical error! User data not found in record. ';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record. ';
