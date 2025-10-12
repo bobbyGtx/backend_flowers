@@ -18,7 +18,7 @@ if ($method === 'OPTIONS') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/productsOp.php';
 
-  $result['error']=false; $result['code'] = 200; $result['message'] = '';
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
   $slug = $_GET['slug'] ?? null;
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
@@ -36,20 +36,14 @@ if ($method === 'OPTIONS') {
       $query = $_GET['query'] ?? null;  // 'flower'
       $result = searchProducts($link, $result, $query, $reqLanguage);
       if ($result['error']) goto endRequest;
-    
       goto endRequest;
     }//обработчик запроса поиска товара
     //Получение информации о товаре по ег url
-    $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
     $result = getProductInfo($link, $result, $slug, $reqLanguage);
     if ($result["error"]) goto endRequest;
-    
   } else {
-    $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
-
     $result = getProducts($link, $result, $_GET, $reqLanguage);
     if ($result['error']) goto endRequest;
-
   }//обработчик запроса всех товаров по фильтрам url = /products.php
 
 } else {
