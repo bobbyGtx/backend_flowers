@@ -29,7 +29,9 @@ if ($method === 'OPTIONS') {
   if ($slug) {
     $slug = htmlspecialchars($slug);
     if ($slug === 'best') {
-      $result['message'] = "Вы запросили список лучших продуктов";
+      $result = getBestProducts($link, $result, $reqLanguage);
+      if ($result['error']) goto endRequest;
+      
       goto endRequest;
     }//обработчик запроса лучших товаров
     if ($slug === 'search'){
