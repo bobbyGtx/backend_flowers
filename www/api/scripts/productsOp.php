@@ -252,7 +252,6 @@ function searchProducts($link, $result, $searchStr, $languageTag=''){
   endFunc:
   return $result;
 }
-
 function getBestProducts($link, $result, $languageTag=''){
   include 'variables.php';
   $funcName = 'getBestProducts_func';

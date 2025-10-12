@@ -67,7 +67,6 @@ function checkProduct(mysqli $link, array $result, int $productId, int $quantity
   endFunc:
   return $result;
 }//Проверка наличия товаров в базе и достаточности на складе
-
 function compileUserCart($link, $result, $userCartItems, $userId, $languageTag=''){
   include 'scripts/variables.php';
   $funcName = 'compileUserCart_func';
@@ -229,7 +228,6 @@ function getCart($link, $result, $userId){
   endFunc:
   return $result;
 }//Получение данных корзины пользователя
-
 function clearUserCart($link, $result, $userId){
   include 'variables.php';
   $funcName = 'clearUserCart'.'_func';

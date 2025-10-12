@@ -129,7 +129,7 @@ if ($method === 'OPTIONS') {
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
   include 'scripts/tokensOp.php';//Проверка токена
-  include 'scripts/cartOp.php';
+  include 'scripts/orderOp.php';
   $result = ['error' => false, 'code' => 200, 'message' => 'Request success!'];//Создание массива с ответом Ок
   $priorityMsg = null; //Добавочное сообщение на случай не критической ошибка. Добавляется к ответу вместо message в конце успешной обработки соответств. запроса
   $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
@@ -151,33 +151,9 @@ if ($method === 'OPTIONS') {
     }
   }
 
-  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!', 'count' => 0];//Создание массива с ответом Ок
-  //Получение корзины пользователя
-  $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
-  try{
-  $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
-  }
+  $result = getOrders($link, $result, $userId, $reqLanguage);
+  if ($result['error']) goto endRequest;
 
-  $result['createdAt'] = 0;$result['updatedAt'] = 0;$result['items'] = [];//Корректировка массива с ответом Ок
-  if (mysqli_num_rows($sqlResult)===0){
-    $result = createUserCart($link,$result,$userId);
-    if ($result['error']){
-      goto endRequest;
-    } else {
-      if ($_GET["cartCount"]){
-        unset($result['items']); 
-        unset($result['createdAt']); 
-        unset($result['updatedAt']); 
-        goto endRequest;
-      }// Обработка запроса количества товара
-      $result['items'] = []; $result['itemsInCart'] = 0;goto endRequest;
-      }
-  }//Если нет записи в таблице - создаем ответ и завершаем запрос
-
-  $row = mysqli_fetch_assoc($sqlResult);//парсинг 
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
