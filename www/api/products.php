@@ -16,10 +16,15 @@ if ($method === 'OPTIONS') {
   return;
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include 'scripts/productsOp.php';
 
   $result['error']=false; $result['code'] = 200; $result['message'] = '';
   $slug = $_GET['slug'] ?? null;
-  
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {
+    $result['error']=true; $result['code'] = 400; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;
+  }
 
   if ($slug) {
     $slug = htmlspecialchars($slug);
@@ -29,23 +34,21 @@ if ($method === 'OPTIONS') {
     }//обработчик запроса лучших товаров
     if ($slug === 'search'){
       $query = $_GET['query'] ?? null;  // 'flower'
-      $result['message'] = "Вы ищете продукт: " . $query;
+      $result = searchProducts($link, $result, $query, $reqLanguage);
+      if ($result['error']) goto endRequest;
+    
       goto endRequest;
     }//обработчик запроса поиска товара
-    $result['message'] = "Вы запросили продукт: " . $slug;
-  } else {
-    include 'scripts/productsOp.php';
+    //Получение информации о товаре по ег url
     $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
-
-    $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
-    if ($db_connect_response['error'] == true || !$link) {
-      $result['error']=true; $result['code'] = 400; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;
-    }
+    $result = getProductInfo($link, $result, $slug, $reqLanguage);
+    if ($result["error"]) goto endRequest;
+    
+  } else {
+    $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
 
     $result = getProducts($link, $result, $_GET, $reqLanguage);
     if ($result['error']) goto endRequest;
-
-    goto endRequest;
 
   }//обработчик запроса всех товаров по фильтрам url = /products.php
 

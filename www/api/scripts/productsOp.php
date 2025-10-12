@@ -1,5 +1,5 @@
 <?php
-function getProductInfo($link, $result, $productId, $languageTag=''){
+function getProductShortInfo($link, $result, $productId, $languageTag=''){
 
   //переделать запрос на явные поля!
   include 'variables.php';
@@ -7,7 +7,7 @@ function getProductInfo($link, $result, $productId, $languageTag=''){
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$productId) {$result['error']=true; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`image`,`type_id`,`lightning$languageTag` as `lightning`,`humidity$languageTag` as `humidity`,`temperature$languageTag` as `temperature`,`height`,`diameter`,`url`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
   try{
@@ -159,3 +159,72 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   //$result['get'] = $getReq;
   return $result;
 }//Функция обработки запроса товаров с фильтрами
+
+function getProductInfo($link, $result, $productUrl, $languageTag=''){
+  include 'variables.php';
+  $funcName = 'getProductInfo_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$productUrl) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productUrlNotFound'] . "($funcName)"; goto endFunc;}
+  $productUrl = strtolower($productUrl);
+
+  $sql = "SELECT 
+  p.id,
+  p.name$languageTag,
+  p.price,
+  p.image,
+  p.type_id,
+  p.lightning$languageTag,
+  p.humidity$languageTag,
+  p.temperature$languageTag,
+  p.height,
+  p.diameter,
+  p.url,
+  p.count,
+  p.disabled,
+  t.name$languageTag as typeName,
+  t.url as typeUrl
+  FROM products p 
+  INNER JOIN types t ON p.type_id = t.id
+  WHERE p.url = ?";
+
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    // Привязываем параметр (s = string)
+    $stmt->bind_param("s", $productUrl);
+    $stmt->execute(); 
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  // Получаем результат
+  $resultSet = $stmt->get_result();
+  // Проверка на пустой результат
+  if ($resultSet->num_rows === 0) {$result['error'] = true;$result['code'] = 400;$result['message'] = $errors['productNotFound'];goto endFunc;}
+  // Берём только ассоциативный массив
+  $product = $resultSet->fetch_assoc();
+
+  $product['type'] = ['id'=>$product['type_id'],'name'=>$product['typeName'],'url'=>$product['typeUrl']];
+  unset($product['type_id'],$product['typeName'],$product['typeUrl']);
+
+  // Кладём в итоговый массив
+  $result['product'] = $product;
+  // Освобождаем ресурсы
+  $stmt->close();
+ 
+  endFunc:
+  //$result['sql'] = $sql;
+  return $result;
+}
+
+function searchProducts($link, $result, $searchStr, $languageTag=''){
+  include 'variables.php';
+  $funcName = 'searchProducts_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$searchStr) {$result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;}
+  $searchStr = strtolower($searchStr);
+
+  
+  $result['products'] = [];
+  endFunc:
+  return $result;
+}

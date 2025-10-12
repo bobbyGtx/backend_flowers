@@ -40,7 +40,8 @@ $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
 $errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
 $errors['paymentIdNotFound'] ='Payment method identifier not found! '; 
-$errors['userIdNotFound'] = 'User ID not found in function! ';
+$errors['userIdNotFound'] = 'User ID not found in function! ';//500
+$critErr['productUrlNotFound'] ='Product URL not found in function! ';//500
 $errors['orderIdNotFound'] = 'Order ID not found in function! ';
 $errors['productIdNotFound'] = 'Product ID not found in function! ';
 $errors['quantityNotFound'] = 'Quantity not found in function! ';
@@ -69,6 +70,7 @@ $dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized! ';
 
 $critErr['userDNotFound'] ='Critical error! User data not found in record. ';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record. ';
+
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';

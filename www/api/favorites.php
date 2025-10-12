@@ -44,7 +44,7 @@ if ($method === 'OPTIONS') {
   }
 
   //ищем инфо о товаре в базе для проверки наличия в базе и ответа
-  $result = getProductInfo($link, $result, $postProductId, $reqLanguage);
+  $result = getProductShortInfo($link, $result, $postProductId, $reqLanguage);
   if ($result['error']) goto endRequest;
 
   $row = $result['row']; unset($result['row']);
