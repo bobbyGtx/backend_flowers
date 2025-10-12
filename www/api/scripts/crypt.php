@@ -1,27 +1,33 @@
 <?php
 //$cryptedText = __encode($password, 'key'); //зашифровать
 //$decryptedText = __decode($cryptedText, 'key'); //расшифровать
-function __encode($unencoded, $key)
-{//Шифруем
-  $string = base64_encode($unencoded);//Переводим в base64
+function __encode($unencoded, $key) {
+    $string = base64_encode($unencoded); // Переводим в base64
+    $len = strlen($string);
+    $chars = []; // Массив символов для новой строки
 
-  $arr = array();//Это массив
-  $x = 0;
-  while ($x++ < strlen($string)) {//Цикл
-    $arr[$x - 1] = md5(md5($key . $string[$x - 1]) . $key);//Почти чистый md5
-    $newstr = $newstr . $arr[$x - 1][3] . $arr[$x - 1][6] . $arr[$x - 1][1] . $arr[$x - 1][2];//Склеиваем символы
-  }
-  return $newstr;//Возвращаем строку
-}
+    for ($i = 0; $i < $len; $i++) {
+        $hash = md5(md5($key . $string[$i]) . $key);
+        $chars[] = $hash[3] . $hash[6] . $hash[1] . $hash[2];
+    }
 
-function __decode($encoded, $key)
-{//расшифровываем
-  $strofsym = "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM=";//Символы, с которых состоит base64-ключ
-  $x = 0;
-  $tmp=[];
-  while ($x++ <= strlen($strofsym)) {//Цикл
-    $tmp = md5(md5($key . $strofsym[$x - 1]) . $key);//Хеш, который соответствует символу, на который его заменят.
-    $encoded = str_replace($tmp[3] . $tmp[6] . $tmp[1] . $tmp[2], $strofsym[$x - 1], $encoded);//Заменяем №3,6,1,2 из хеша на символ
-  }
-  return base64_decode($encoded);//Вертаем расшифрованную строку
-}
+    return implode('', $chars);
+}//Функция кодирования строки
+
+function __decode($encoded, $key) {
+    $strofsym = "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM=";
+    $len = strlen($strofsym);
+
+    // Подготовка карты "шаблон => символ"
+    $replaceMap = [];
+    for ($x = 0; $x < $len; $x++) {
+        $char = $strofsym[$x];
+        $hash = md5(md5($key . $char) . $key);
+        $pattern = $hash[3] . $hash[6] . $hash[1] . $hash[2];
+        $replaceMap[$pattern] = $char;
+    }
+
+    $decodedStr = strtr($encoded, $replaceMap);
+
+    return base64_decode($decodedStr);
+}//Функция декодирования строки
