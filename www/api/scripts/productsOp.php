@@ -38,14 +38,15 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   if (is_array($getReq) && count($getReq) > 0) {
     
     $types = $getReq['types'];
-    $diameterFrom = $getReq['diameterFrom'];
-    $diameterTo = $getReq['diameterTo'];
-    $heightFrom = $getReq['heightFrom'];
-    $heightTo = $getReq['heightTo'];
-    $priceFrom = $getReq['priceFrom'];
-    $priceTo = $getReq['priceTo'];
+    $diameterFrom = !empty($getReq['diameterFrom'])?$getReq['diameterFrom']:null;
+    $diameterTo = $getReq['diameterTo'];!empty($getReq['diameterTo'])?$getReq['diameterTo']:null;
+    $heightFrom = $getReq['heightFrom'];!empty($getReq['heightFrom'])?$getReq['heightFrom']:null;
+    $heightTo = $getReq['heightTo'];!empty($getReq['heightTo'])?$getReq['heightTo']:null;
+    $priceFrom = $getReq['priceFrom'];!empty($getReq['priceFrom'])?$getReq['priceFrom']:null;
+    $priceTo = $getReq['priceTo'];!empty($getReq['priceTo'])?$getReq['priceTo']:null;
     $sort = $getReq['sort'];
-    $page = $getReq['page'];
+    $page = $getReq['page']?intval($getReq['page']):1; if ($page <1) $page = 1;
+    $offset = ($page-1)*$productsPerPage;
 
     $filters=[];
     $sortSQL = '';
@@ -124,7 +125,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   }//Обработка параметров запроса
 
   $baseSQL = "SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl FROM products p INNER JOIN types t ON p.type_id = t.id";
-  $sql = "$baseSQL$filterSQL$sortSQL;";
+  $sql = "$baseSQL$filterSQL$sortSQL LIMIT $offset, $productsPerPage;";
   
   try{
     $sqlResult = mysqli_query($link, $sql);
@@ -142,7 +143,17 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     $item['type'] = ['id'=>$item['type_id'],'name'=>$item['typeName'],'url'=>$item['typeUrl']];
     unset($item['type_id'],$item['typeName'],$item['typeUrl']);
   }//преобразование типа продукта в объект
-  $result['response'] = ['totalCount'=>mysqli_num_rows($sqlResult),'items'=>$items];
+
+
+  // Считаем общее количество товаров
+  $totalResult = mysqli_query($link, "SELECT COUNT(*) AS total FROM products");
+  $totalRow = mysqli_fetch_assoc($totalResult);
+  $total = $totalRow['total'];
+  // Считаем количество страниц
+  $totalPages = ceil($total / $productsPerPage);
+
+  //$result['response'] = ['totalCount'=>mysqli_num_rows($sqlResult),'items'=>$items];
+  $result['response'] = ['page'=>$page,'totalPages'=>mysqli_num_rows($sqlResult),'totalItems'=>$total,'items'=>$items];
 
   /*
     SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl
@@ -213,7 +224,8 @@ function getProductInfo($link, $result, $productUrl, $languageTag=''){
   endFunc:
   //$result['sql'] = $sql;
   return $result;
-}
+}//Получение информации об одном товаре
+
 function searchProducts($link, $result, $searchStr, $languageTag=''){
   include 'variables.php';
   $funcName = 'searchProducts_func';
@@ -251,7 +263,7 @@ function searchProducts($link, $result, $searchStr, $languageTag=''){
 
   endFunc:
   return $result;
-}
+}//Поиск продуктов соответствующих строке запроса
 function getBestProducts($link, $result, $languageTag=''){
   include 'variables.php';
   $funcName = 'getBestProducts_func';
@@ -285,4 +297,4 @@ function getBestProducts($link, $result, $languageTag=''){
 
   endFunc:
   return $result;
-}
+}//Получение списка лучших продуктов
