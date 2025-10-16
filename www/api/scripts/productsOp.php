@@ -39,13 +39,13 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     
     $types = $getReq['types'];
     $diameterFrom = !empty($getReq['diameterFrom'])?$getReq['diameterFrom']:null;
-    $diameterTo = $getReq['diameterTo'];!empty($getReq['diameterTo'])?$getReq['diameterTo']:null;
-    $heightFrom = $getReq['heightFrom'];!empty($getReq['heightFrom'])?$getReq['heightFrom']:null;
-    $heightTo = $getReq['heightTo'];!empty($getReq['heightTo'])?$getReq['heightTo']:null;
-    $priceFrom = $getReq['priceFrom'];!empty($getReq['priceFrom'])?$getReq['priceFrom']:null;
-    $priceTo = $getReq['priceTo'];!empty($getReq['priceTo'])?$getReq['priceTo']:null;
-    $sort = $getReq['sort'];
-    $page = $getReq['page']?intval($getReq['page']):1; if ($page <1) $page = 1;
+    $diameterTo = !empty($getReq['diameterTo'])?$getReq['diameterTo']:null;
+    $heightFrom = !empty($getReq['heightFrom'])?$getReq['heightFrom']:null;
+    $heightTo = !empty($getReq['heightTo'])?$getReq['heightTo']:null;
+    $priceFrom = !empty($getReq['priceFrom'])?$getReq['priceFrom']:null;
+    $priceTo = !empty($getReq['priceTo'])?$getReq['priceTo']:null;
+    $sort = !empty($getReq['sort'])?$getReq['sort']:null;
+    $page = !empty($getReq['page'])?intval($getReq['page']):1; if ($page <1) $page = 1;
     $offset = ($page-1)*$productsPerPage;
 
     $filters=[];
