@@ -25,7 +25,7 @@ if ($method === 'OPTIONS') {
     $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . "($reqName)" . $db_connect_response['message']; goto endRequest;
   }
 
-  $sql= "SELECT `id``statusName$reqLanguage` FROM `statuses`;";
+  $sql= "SELECT `id`,`statusName$reqLanguage` FROM `statuses`;";
   try{
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
