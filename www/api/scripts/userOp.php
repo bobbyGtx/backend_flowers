@@ -81,7 +81,7 @@ function login($link, $result, $login, $pass){
    $key = $settings['secretKey'];//ключ шифрования паролей
    $passwordEnc = __encode($pass, $key);//шифрование пароля
 
-   $sql = "SELECT `id`,`firstName`,`lastName`,`email`,`password`,`emailVerification`,`blocked`  FROM users WHERE email = '" . $login . "' AND `password` = '" . $passwordEnc . "'";
+   $sql = "SELECT `id`,`email`,`password`,`emailVerification`,`blocked`  FROM users WHERE email = '" . $login . "' AND `password` = '" . $passwordEnc . "'";
    try{
       $sqlResult = mysqli_query($link, $sql);
    } catch (Exception $e){
@@ -100,7 +100,7 @@ function login($link, $result, $login, $pass){
    if(boolval($row['blocked'])===true){
       $result['error']=true; $result['code'] = 403; $result['message'] = $infoMessages['userBlocked']; goto endFunc;
    }
-   $result['user'] = ['userId'=>$row['id'],'firstName'=>$row['firstName'],'lastName'=>$row['lastName']];
+   $result['user'] = ['userId'=>$row['id']];
 
    endFunc:
    return $result;

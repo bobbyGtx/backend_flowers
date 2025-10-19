@@ -18,25 +18,27 @@ if ('OPTIONS' === $method) {
   if ($db_connect_response['error'] == true || !$link) {
     $result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;
   }
-
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
   $refreshToken = $postDataJson["refreshToken"];//токен из запроса
 
   if (empty($refreshToken)) {
-    $result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters not recognized!'; goto endRequest;
+    $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized']; goto endRequest;
   }
   
-  if(strlen($refreshToken)== $refrTokenLenght){
+  if(preg_match($refreshTokenRegEx, $refreshToken)){
     $sql = "UPDATE `$userTableName` SET `$accTokenField`='',`$accTokenLifeField`='0',`$refreshTokenField`='',`$refrTokenLifeField`='0' WHERE `$refreshTokenField`= '" . $refreshToken . "'";
     $sqlResultSaveTokens = mysqli_query($link, $sql);//выполняем запрос
     if (empty($sqlResultSaveTokens)) {
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'Request rejected by delete data from database.'; goto endRequest;
+      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['delReqRejected']; goto endRequest;
     }
+  }else{
+    $result['error']=true; $result['code'] = 400; $result['message'] = $errors['dataNotAcceptable'];
   }
 
 } else {
-  $result['error']=true; $result['code'] = 405; $result['message'] = 'Method Not Allowed';
+  include 'scripts/variables.php';
+  $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
 
 endRequest:

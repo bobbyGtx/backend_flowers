@@ -81,7 +81,8 @@ $infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change! ';
 
 $authError['loginOrPassNC'] ='Login or password not correct! ';
-$authError['loginOrPassNA'] ='Login or password not acceptable! ';
+$authError['emailNotCorrect'] ='Email not correct! ';
+$authError['passwortNotCorrect'] ='Password not acceptable! ';
 $authError['refrTokenInvalid'] = 'Refresh token invalid! ';
 $authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 

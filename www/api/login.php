@@ -31,8 +31,11 @@ if ('OPTIONS' === $method) {
     $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized']; goto endRequest;
   }else {
     //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД. Если нет - возвращаем ошибку!
-    if (!preg_match($emailRegEx, $loginPost) || !preg_match($passwordRegEx, $passwordPost)) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['loginOrPassNA']; goto endRequest;
+    if (!preg_match($emailRegEx, $loginPost)) {
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotCorrect']; goto endRequest;
+    } 
+    if (!preg_match($passwordRegEx, $passwordPost)) {
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['passwortNotCorrect']; goto endRequest;
     } 
   }
 
