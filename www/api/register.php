@@ -33,54 +33,42 @@ if ('OPTIONS' === $method) {
 
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
-  $firstNamePost = $postDataJson["firstName"];//логин из запроса
-  $lastNamePost = $postDataJson["lastName"];//логин из запроса
   $emailPost = $postDataJson["email"];//логин из запроса
-  $phonePost = $postDataJson["phone"];//логин из запроса
   $passwordPost = $postDataJson["password"];//пароль из запроса
   $passwordRepeatPost = $postDataJson["passwordRepeat"];//пароль из запроса
 
-  if (empty($firstNamePost) || empty($lastNamePost) || empty($emailPost) || empty($phonePost) || empty($passwordPost) || empty($passwordRepeatPost)) {
-    $result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters not recognized!'; goto endRequest;
+  if (empty($emailPost) || empty($passwordPost) || empty($passwordRepeatPost)) {
+    $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized']; goto endRequest;
   } else {
     $messages = [];
-    if (!preg_match($firstNameRegEx, $firstNamePost)) {
-      $result['error']=true; $messages[] = 'Invalid First Name!';
-    }//проверка на соответствие имени. Собираем все ошибки
-    if (!preg_match($lastNameRegEx, $lastNamePost)) {
-      $result['error']=true; $messages[] = 'Invalid Last Name!';
-    } //проверка на соответствие фамилии. Собираем все ошибки
     if (!preg_match($emailRegEx, $emailPost)) {
-      $result['error']=true; $messages[] ='EMail not acceptable!';
+      $result['error']=true; $messages[] ='EMail';
     }//проверка на соответствие требованиям почты
-    if (!preg_match($telephoneRegEx, $phonePost)) {
-      $result['error']=true; $messages[] = 'Invalid phone format!';
-    } //проверка на соответствие формата телефона
     if (!preg_match($passwordRegEx, $passwordPost)) {
-      $result['error']=true; $messages[] ='Password not acceptable!';
+      $result['error']=true; $messages[] ='Password';
     }//проверка на соответствие требованиям почты
     if ($passwordPost <> $passwordRepeatPost) {
-      $result['error']=true; $messages[] ='Passwords do not match!';
+      $result['error']=true; $messages[] ='Password repeat';
     } //проверка идентичности паролей
     if ($result['error']==true) {
-      $result['code'] = 406;$result['message'] = 'Not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
+      $result['code'] = 406;$result['message'] = 'Not Acceptable!'. implode(',',$messages); $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
     }
   }
   
   $passwordPostEnc = __encode($passwordPost, $key);//шифрование пароля
   
   $result = checkEmail($link,$result,$emailPost,false);//проверка уникальности почты
-  if ($result['error']) {goto endRequest;}
+  if ($result['error']) goto endRequest;
 //добавление пользователя
-  $sql="INSERT INTO `$userTableName`(`firstName`, `lastName`, `email`, `phone`, `password`, `updatedAt`) VALUES (?,?,?,?,?,?)";
+  $sql="INSERT INTO `$userTableName`(`email`, `password`, `updatedAt`) VALUES (?,?,?)";
   $timeStamp=time();
   try{
-  mysqli_report(MYSQLI_REPORT_ALL);
-  $stmt = mysqli_prepare($link, $sql);
-  mysqli_stmt_bind_param($stmt, 'sssssi',$firstNamePost,$lastNamePost,$emailPost,$phonePost,$passwordPostEnc,$timeStamp);
-  mysqli_stmt_execute($stmt);
-  $newUserId = mysqli_insert_id($link);
-  mysqli_stmt_close($stmt);
+    mysqli_report(MYSQLI_REPORT_ALL);
+    $stmt = mysqli_prepare($link, $sql);
+    mysqli_stmt_bind_param($stmt, 'ssi',$emailPost,$passwordPostEnc,$timeStamp);
+    mysqli_stmt_execute($stmt);
+    $newUserId = mysqli_insert_id($link);
+    mysqli_stmt_close($stmt);
   } catch (Exception $e){
     $emessage = $e->getMessage();
     $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($emessage))";goto endRequest;
@@ -92,10 +80,8 @@ if ('OPTIONS' === $method) {
 
   //Создание записи в таблице корзин
   $result = createUserCart($link, $result, $newUserId);
-  if ($result['error']){
-    goto endRequest;
-  }
-   
+  if ($result['error']) goto endRequest;
+  
 }else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
