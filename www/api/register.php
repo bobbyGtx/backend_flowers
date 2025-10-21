@@ -42,16 +42,16 @@ if ('OPTIONS' === $method) {
   } else {
     $messages = [];
     if (!preg_match($emailRegEx, $emailPost)) {
-      $result['error']=true; $messages[] ='EMail';
+      $result['error']=true; $messages[] ='EMail is incorrect';
     }//проверка на соответствие требованиям почты
     if (!preg_match($passwordRegEx, $passwordPost)) {
-      $result['error']=true; $messages[] ='Password';
+      $result['error']=true; $messages[] ='Password is too short';
     }//проверка на соответствие требованиям почты
     if ($passwordPost <> $passwordRepeatPost) {
-      $result['error']=true; $messages[] ='Password repeat';
+      $result['error']=true; $messages[] ="Passwords don't match";
     } //проверка идентичности паролей
     if ($result['error']==true) {
-      $result['code'] = 406;$result['message'] = 'Not Acceptable!'. implode(',',$messages); $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
+      $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
     }
   }
   
