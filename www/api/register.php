@@ -42,7 +42,7 @@ if ('OPTIONS' === $method) {
   } else {
     $messages = [];
     if (!preg_match($emailRegEx, $emailPost)) {
-      $result['error']=true; $messages[] ='EMail is incorrect';
+      $result['error']=true; $messages[] ='E-Mail is incorrect';
     }//проверка на соответствие требованиям почты
     if (!preg_match($passwordRegEx, $passwordPost)) {
       $result['error']=true; $messages[] ='Password is too short';

@@ -269,7 +269,17 @@ function getBestProducts($link, $result, $languageTag=''){
   $funcName = 'getBestProducts_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  $sql = "SELECT p.id,p.name$languageTag,p.price,p.image,p.type_id,p.lightning$languageTag,p.humidity$languageTag,p.temperature$languageTag,p.height,p.diameter,p.url,p.count,p.disabled, t.name$languageTag as typeName, t.url as typeUrl,
+  $sql = "SELECT p.id,
+  p.name$languageTag as name,
+  p.price,
+  p.image,
+  p.type_id,
+  p.lightning$languageTag as lightning,
+  p.humidity$languageTag as humidity,
+  p.temperature$languageTag as temperature,
+  p.height,p.diameter,p.url,p.count,p.disabled,
+   t.name$languageTag as typeName,
+    t.url as typeUrl,
     (p.count / p.price) AS score
     FROM products p 
     INNER JOIN types t ON p.type_id = t.id
