@@ -45,13 +45,13 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     $priceFrom = !empty($getReq['priceFrom'])?$getReq['priceFrom']:null;
     $priceTo = !empty($getReq['priceTo'])?$getReq['priceTo']:null;
     $sort = !empty($getReq['sort'])?$getReq['sort']:null;
-    $page = !empty($getReq['page'])?intval($getReq['page']):1; if ($page <1) $page = 1;
-    $offset = ($page-1)*$productsPerPage;
+    $page = !empty($getReq['page'])?intval($getReq['page']):1;
 
+    
     $filters=[];
     $sortSQL = '';
     
-    if (!empty($types)&& is_array($types) && count($types)>0){
+    if (!empty($types) && is_array($types) && count($types)>0){
       if (count($types)==1){
         $filters[] = "t.url = '$types[0]'";
       }else{
@@ -121,11 +121,17 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     if(count($filters) > 0){
       $filterSQL = ' WHERE ' .implode(" AND ", $filters);
     }
-    
   }//Обработка параметров запроса
 
+   
+  if (!empty($page)||!is_null($page) || $page >0 ) $offset = ($page-1)*$productsPerPage; 
+  else{
+    $offset=0;$page=1;
+  } 
+  
   $baseSQL = "SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl FROM products p INNER JOIN types t ON p.type_id = t.id";
   $sql = "$baseSQL$filterSQL$sortSQL LIMIT $offset, $productsPerPage;";
+  $result['sql']=$sql;
   
   try{
     $sqlResult = mysqli_query($link, $sql);
@@ -153,7 +159,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   $totalPages = ceil($total / $productsPerPage);
 
   //$result['response'] = ['totalCount'=>mysqli_num_rows($sqlResult),'items'=>$items];
-  $result['response'] = ['page'=>$page,'totalPages'=>mysqli_num_rows($sqlResult),'totalItems'=>$total,'items'=>$items];
+  $result['response'] = ['page'=>$page,'totalPages'=>$totalPages,'totalItems'=>$total,'items'=>$items];
 
   /*
     SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl
