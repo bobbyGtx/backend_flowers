@@ -129,9 +129,24 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     $offset=0;$page=1;
   } 
   
-  $baseSQL = "SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl FROM products p INNER JOIN types t ON p.type_id = t.id";
+  $baseSQL = "SELECT 
+  p.id,
+  p.name$languageTag,
+  p.price, 
+  p.image,
+  p.lightning$languageTag as lightning,
+  p.humidity$languageTag as humidity,
+  p.temperature$languageTag as temperature,
+  p.height, 
+  p.diameter, 
+  p.url, 
+  p.count,
+  p.disabled,
+  p.type_id, 
+  t.name$languageTag as typeName, 
+  t.url as typeUrl 
+  FROM products p INNER JOIN types t ON p.type_id = t.id";
   $sql = "$baseSQL$filterSQL$sortSQL LIMIT $offset, $productsPerPage;";
-  $result['sql']=$sql;
   
   try{
     $sqlResult = mysqli_query($link, $sql);
@@ -154,12 +169,11 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   // Считаем общее количество товаров
   $totalResult = mysqli_query($link, "SELECT COUNT(*) AS total FROM products");
   $totalRow = mysqli_fetch_assoc($totalResult);
-  $total = $totalRow['total'];
+  $total = intval($totalRow['total']);
   // Считаем количество страниц
   $totalPages = ceil($total / $productsPerPage);
 
-  //$result['response'] = ['totalCount'=>mysqli_num_rows($sqlResult),'items'=>$items];
-  $result['response'] = ['page'=>$page,'totalPages'=>$totalPages,'totalItems'=>$total,'items'=>$items];
+  $result['response'] = ['page'=>$page,'totalPages'=>$totalPages,'totalProducts'=>$total,'products'=>$items];
 
   /*
     SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl
