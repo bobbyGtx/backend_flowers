@@ -167,7 +167,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
 
 
   // Считаем общее количество товаров
-  $totalResult = mysqli_query($link, "SELECT COUNT(*) AS total FROM products");
+  $totalResult = mysqli_query($link, "SELECT COUNT(*) AS total FROM products p INNER JOIN types t ON p.type_id = t.id$filterSQL");
   $totalRow = mysqli_fetch_assoc($totalResult);
   $total = intval($totalRow['total']);
   // Считаем количество страниц

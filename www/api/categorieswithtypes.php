@@ -71,7 +71,6 @@ if ($method === 'OPTIONS') {
 
   foreach ($types as $type){
     $i = intval($type['category_id']);
-    unset($type['category_id']);
     $categories[$i]['types'][]=$type;
   }
   $result['categories'] = array_values($categories);
