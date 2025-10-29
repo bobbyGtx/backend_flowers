@@ -36,12 +36,12 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   $sortSQL = '';
 
   if (is_array($getReq) && count($getReq) > 0) {
+    $result['types'] = $getReq['types'];
 
     //Передавать параметры types: types[]=str&types[]=str или types=str,str,str
     if ($getReq['types']){
       $types=is_array($getReq['types'])?$getReq['types']:explode(',', $_GET['types']);
     }
-    $types = explode(',', $_GET['types']);
     $diameterFrom = !empty($getReq['diameterFrom'])?$getReq['diameterFrom']:null;
     $diameterTo = !empty($getReq['diameterTo'])?$getReq['diameterTo']:null;
     $heightFrom = !empty($getReq['heightFrom'])?$getReq['heightFrom']:null;
@@ -54,8 +54,6 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     
     $filters=[];
     $sortSQL = '';
-
-    $result['types']=$types;
     
     if (!empty($types) && is_array($types) && count($types)>0){
       if (count($types)==1){
