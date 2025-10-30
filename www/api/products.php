@@ -34,6 +34,13 @@ if ($method === 'OPTIONS') {
       
       goto endRequest;
     }//обработчик запроса лучших товаров
+    if ($slug === 'recommend') {
+
+      $result = getRecommendProducts($link, $result,$_GET['category'], $reqLanguage);
+      if ($result['error']) goto endRequest;
+      
+      goto endRequest;
+    }//обработчик запроса лучших товаров
     if ($slug === 'search'){
       $query = $_GET['query'] ?? null;  // 'flower'
       $result = searchProducts($link, $result, $query, $reqLanguage);

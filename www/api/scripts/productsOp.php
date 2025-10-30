@@ -36,8 +36,6 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   $sortSQL = '';
 
   if (is_array($getReq) && count($getReq) > 0) {
-    $result['types'] = $getReq['types'];
-
     //Передавать параметры types: types[]=str&types[]=str или types=str,str,str
     if ($getReq['types']){
       $types=is_array($getReq['types'])?$getReq['types']:explode(',', $_GET['types']);
@@ -159,7 +157,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   }
   
   if(mysqli_num_rows($sqlResult) == 0){
-    $result['response'] = ['totalCount'=>0,'items'=>[]];
+    $result['response'] = ['page'=>1,'totalPages'=>1, 'totalProducts'=>0, 'products'=>[]];
     goto endFunc;
   }
   $items = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);
@@ -331,3 +329,50 @@ function getBestProducts($link, $result, $languageTag=''){
   endFunc:
   return $result;
 }//Получение списка лучших продуктов
+
+function getRecommendProducts($link, $result, $categoryId=0, $languageTag=''){
+  include 'variables.php';
+  $funcName = 'getRecommendProducts_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  settype($categoryId,"integer");
+  if (!($categoryId >= 0)) $categoryId = 0;
+
+  $sql = "SELECT p.id,
+  p.name$languageTag as name,
+  p.price,
+  p.image,
+  p.type_id,
+  p.lightning$languageTag as lightning,
+  p.humidity$languageTag as humidity,
+  p.temperature$languageTag as temperature,
+  p.height,p.diameter,p.url,p.count,p.disabled, t.category_id,
+   t.name$languageTag as typeName,
+    t.url as typeUrl
+    FROM products p 
+    INNER JOIN types t ON p.type_id = t.id
+    INNER JOIN categories c ON t.category_id = c.id " . ($categoryId>0?"WHERE c.id = $categoryId AND p.count > 0":"WHERE p.count > 0") .
+    " ORDER BY p.count DESC,RAND() LIMIT $bestProductsCount";
+    
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  if ($response->num_rows==0){
+    $result["error"]=true; $result["code"]= 500; $result["message"] = $dbError['unexpResponse']; goto endFunc;
+  }
+  
+  // Получаем результат
+  $products = $response->fetch_all(MYSQLI_ASSOC);
+  foreach ($products as &$product) {
+    $product['type'] = ['id'=>$product['type_id'],'name'=>$product['typeName'],'url'=>$product['typeUrl']];
+    unset($product['type_id'],$product['typeName'],$product['typeUrl']);
+  }
+  $result['products'] = $products;
+
+  endFunc:
+  return $result;
+}//Получение списка рекомендуемых продуктов
