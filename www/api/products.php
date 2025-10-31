@@ -34,13 +34,17 @@ if ($method === 'OPTIONS') {
       
       goto endRequest;
     }//обработчик запроса лучших товаров
-    if ($slug === 'recommend') {
-
-      $result = getRecommendProducts($link, $result,$_GET['category'], $reqLanguage);
+    if ($slug === 'recommended') {
+      //categoryId - для выборки товаров из этой же категории, productId - для исключения выбранного товара из рекомендаций
+      $result = getRecommendProducts($link, $result,$_GET['categoryId'],$_GET['productId'], $reqLanguage);
       if ($result['error']) goto endRequest;
-      
       goto endRequest;
-    }//обработчик запроса лучших товаров
+    }//обработчик запроса рекомендуемых товаров
+      if ($slug === 'short-info') {
+      $result = getProductCount($link, $result,$_GET['productId']);
+      if ($result['error']) goto endRequest;
+      goto endRequest;
+    }//обработчик запроса получения короткой информации о товаре по id. disabled, count, price
     if ($slug === 'search'){
       $query = $_GET['query'] ?? null;  // 'flower'
       $result = searchProducts($link, $result, $query, $reqLanguage);

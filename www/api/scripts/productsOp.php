@@ -25,6 +25,32 @@ function getProductShortInfo($link, $result, $productId, $languageTag=''){
   return $result;
 }//Получение инфо о товаре по id
 
+function getProductCount($link, $result, $productId){
+
+  //переделать запрос на явные поля!
+  include 'variables.php';
+  $funcName = 'getProducCount_func';
+
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
+
+  $sql = "SELECT `id`,`price`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
+  try{
+    $sqlResult = mysqli_query($link, $sql);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
+  }
+
+  if (mysqli_num_rows($sqlResult)===0){$result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'] . "($funcName)";goto endFunc;}
+
+  $result['info'] = mysqli_fetch_assoc($sqlResult);
+
+  endFunc:
+  return $result;
+}//Получение инфо о товаре по id
+
 function getProducts($link, $result, $getReq, $languageTag=''){
   include 'variables.php';
   $funcName = 'getProducts_func';
@@ -146,7 +172,8 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   p.disabled,
   p.type_id, 
   t.name$languageTag as typeName, 
-  t.url as typeUrl 
+  t.url as typeUrl,
+  t.category_id
   FROM products p INNER JOIN types t ON p.type_id = t.id";
   $sql = "$baseSQL$filterSQL$sortSQL LIMIT $offset, $productsPerPage;";
   try{
@@ -215,7 +242,8 @@ function getProductInfo($link, $result, $productUrl, $languageTag=''){
   p.count,
   p.disabled,
   t.name$languageTag as typeName,
-  t.url as typeUrl
+  t.url as typeUrl,
+  t.category_id
   FROM products p 
   INNER JOIN types t ON p.type_id = t.id
   WHERE p.url = ?";
@@ -255,7 +283,7 @@ function searchProducts($link, $result, $searchStr, $languageTag=''){
   if (!$searchStr) {$result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;}
   $searchStr = '%' . strtolower($searchStr) . '%';
 
-  $sql = "SELECT p.id,p.name$languageTag,p.price,p.image,p.type_id,p.lightning$languageTag,p.humidity$languageTag,p.temperature$languageTag,p.height,p.diameter,p.url,p.count,p.disabled, t.name$languageTag as typeName, t.url as typeUrl
+  $sql = "SELECT p.id,p.name$languageTag,p.price,p.image,p.type_id,p.lightning$languageTag,p.humidity$languageTag,p.temperature$languageTag,p.height,p.diameter,p.url,p.count,p.disabled, t.name$languageTag as typeName, t.url as typeUrl, t.category_id
     FROM products p 
     INNER JOIN types t ON p.type_id = t.id
     WHERE LOWER(p.name) LIKE LOWER(?)
@@ -298,15 +326,15 @@ function getBestProducts($link, $result, $languageTag=''){
   p.lightning$languageTag as lightning,
   p.humidity$languageTag as humidity,
   p.temperature$languageTag as temperature,
-  p.height,p.diameter,p.url,p.count,p.disabled,
-   t.name$languageTag as typeName,
-    t.url as typeUrl,
-    (p.count / p.price) AS score
-    FROM products p 
-    INNER JOIN types t ON p.type_id = t.id
-    WHERE p.count > 0
-    ORDER BY score DESC
-    LIMIT $bestProductsCount";
+  p.height,p.diameter,p.url,p.count,p.disabled,t.category_id,
+  t.name$languageTag as typeName,
+  t.url as typeUrl,
+  (p.count / p.price) AS score
+  FROM products p 
+  INNER JOIN types t ON p.type_id = t.id
+  WHERE p.count > 0 AND p.disabled = 0
+  ORDER BY score DESC
+  LIMIT $bestProductsCount";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -322,7 +350,7 @@ function getBestProducts($link, $result, $languageTag=''){
   $products = $response->fetch_all(MYSQLI_ASSOC);
   foreach ($products as &$product) {
     $product['type'] = ['id'=>$product['type_id'],'name'=>$product['typeName'],'url'=>$product['typeUrl']];
-    unset($product['type_id'],$product['typeName'],$product['typeUrl']);
+    unset($product['type_id'],$product['typeName'],$product['typeUrl'],$product['score']);
   }
   $result['products'] = $products;
 
@@ -330,13 +358,13 @@ function getBestProducts($link, $result, $languageTag=''){
   return $result;
 }//Получение списка лучших продуктов
 
-function getRecommendProducts($link, $result, $categoryId=0, $languageTag=''){
+function getRecommendProducts($link, $result, $categoryId=0, $productId=0, $languageTag=''){
   include 'variables.php';
   $funcName = 'getRecommendProducts_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  settype($categoryId,"integer");
-  if (!($categoryId >= 0)) $categoryId = 0;
+  settype($categoryId,"integer"); if (!($categoryId >= 0)) $categoryId = 0;
+  settype($productId,"integer"); if (!($productId >= 0)) $productId = 0;
 
   $sql = "SELECT p.id,
   p.name$languageTag as name,
@@ -346,12 +374,12 @@ function getRecommendProducts($link, $result, $categoryId=0, $languageTag=''){
   p.lightning$languageTag as lightning,
   p.humidity$languageTag as humidity,
   p.temperature$languageTag as temperature,
-  p.height,p.diameter,p.url,p.count,p.disabled, t.category_id,
+  p.height,p.diameter,p.url,p.count,p.disabled,t.category_id,
    t.name$languageTag as typeName,
     t.url as typeUrl
     FROM products p 
     INNER JOIN types t ON p.type_id = t.id
-    INNER JOIN categories c ON t.category_id = c.id " . ($categoryId>0?"WHERE c.id = $categoryId AND p.count > 0":"WHERE p.count > 0") .
+    INNER JOIN categories c ON t.category_id = c.id " . ($categoryId>0?"WHERE c.id = $categoryId AND p.id <> $productId AND p.count > 0 AND p.disabled=0":"WHERE p.id <> $productId AND p.count > 0 AND p.disabled=0") .
     " ORDER BY p.count DESC,RAND() LIMIT $bestProductsCount";
     
   try {
