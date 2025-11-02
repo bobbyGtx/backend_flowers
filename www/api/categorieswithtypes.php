@@ -27,53 +27,43 @@ if ($method === 'OPTIONS') {
     goto endRequest;
   }
 
-  // запрос категорий
-  $sql = "SELECT `id`,`name$reqLanguage` as `name`,`url` FROM `categories`;";
+  $sql="SELECT
+  c.id as category_id,
+  c.name$reqLanguage as category_name,
+  c.url as category_url,
+  t.id,
+  t.name$reqLanguage as name,
+  t.url
+  FROM types t 
+  INNER JOIN categories c ON t.category_id = c.id
+  ORDER By c.id ASC";
+
   try {
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e) {
     $emessage = $e->getMessage();
     $result['error'] = true;
     $result['code'] = 500;
-    $result['message'] = $errors['selReqRejected'] . "(Types->Categories) ($emessage))";
+    $result['message'] = $errors['selReqRejected'] . "(CategoriesWithTypes) ($emessage))";
     goto endRequest;
   }
 
-  $numRows = mysqli_num_rows($sqlResult);
-  if ($numRows === 0) {
-    $result['error'] = true;$result['code'] = 400; $result['message'] = "DB return null records from Table 'Categories'!";goto endRequest;
+  if (mysqli_num_rows($sqlResult) === 0) {
+    $result['error'] = true;$result['code'] = 400; $result['message'] = "DB return null records from Table 'Types'!";goto endRequest;
   }
-  $catResponse = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//Парсинг
-  $categories = [];
-  foreach ($catResponse as $item) {
-    $categories[$item['id']] = $item;
-    $categories[$item['id']]['types']=[];
-  }//преобразование массива для подстановки по ключу
+  $catWithTypesReq = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);
 
-  //запрос типов
-  $sql = "SELECT `id`,`name$reqLanguage` as `name`,`url`,`category_id` FROM `types`;";
-  try {
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e) {
-    $emessage = $e->getMessage();
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['selReqRejected'] . "(Types) ($emessage))";
-    goto endRequest;
+  $catWithTypes=[];
+  foreach ($catWithTypesReq as $row) {
+    $categoryId= $row["category_id"];
+    if (empty($catWithTypes[$categoryId])){
+      $catWithTypes[$categoryId]=['id'=>$categoryId,'name'=>$row['category_name'],'url'=>$row['category_url'],'types'=>[]];
+      $catWithTypes[$categoryId]['types'][]=['id'=> $row['id'],'name'=> $row['name'],'url'=> $row['url'],'category_id'=> $categoryId];
+    }else{
+      $catWithTypes[$categoryId]['types'][]=['id'=> $row['id'],'name'=> $row['name'],'url'=> $row['url'],'category_id'=> $categoryId];
+    }
   }
-
-  $numRows = mysqli_num_rows($sqlResult);
-  if ($numRows === 0) {
-    $result['error'] = true; $result['code'] = 400; $result['message'] = "DB return null records from table 'Types'! ";
-    goto endRequest;
-  }
-  $types = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//Парсинг
-
-  foreach ($types as $type){
-    $i = intval($type['category_id']);
-    $categories[$i]['types'][]=$type;
-  }
-  $result['categories'] = array_values($categories);
+  $result['categories'] = array_values($catWithTypes);
 
 } else {
   $result['error'] = true;$result['code'] = 405;$result['message'] = $errors['MethodNotAllowed'];

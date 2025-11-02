@@ -35,7 +35,7 @@ function getProductCount($link, $result, $productId){
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
-  $sql = "SELECT `id`,`price`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
+  $sql = "SELECT `id`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
   try{
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
