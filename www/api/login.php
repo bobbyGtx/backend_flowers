@@ -29,14 +29,6 @@ if ('OPTIONS' === $method) {
   $passwordPost = $postDataJson["password"];//пароль из запроса
   if (empty($passwordPost) || empty($loginPost) ) {
     $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized']; goto endRequest;
-  }else {
-    //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД. Если нет - возвращаем ошибку!
-    if (!preg_match($emailRegEx, $loginPost)) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotCorrect']; goto endRequest;
-    } 
-    if (!preg_match($passwordRegEx, $passwordPost)) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['passwortNotCorrect']; goto endRequest;
-    } 
   }
 
   $result = login($link, $result, $loginPost, $passwordPost);

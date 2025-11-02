@@ -69,19 +69,16 @@ function login($link, $result, $login, $pass){
       $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized'] . "($funcName)"; goto endFunc;
    }
 
-   //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД.
-   if (!preg_match($emailRegEx, $login) || !preg_match($passwordRegEx, $pass)) {
-      $result['error']=true; $result['code'] = 400; $result['message'] = $authError['loginOrPassNA'] . "($funcName)"; goto endFunc;
-   } 
+   //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД. Если нет - возвращаем ошибку!
+    if (!preg_match($emailRegEx, $login)) {
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotCorrect']; goto endFunc;
+    } 
+    if (!preg_match($passwordRegEx, $pass)) {
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['passwortNotCorrect']; goto endFunc;
+    } 
 
-   $settings = getSettings($link);//Получение ключа шифрования. 
-   if ($settings == false) {
-      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endFunc;
-   }
-   $key = $settings['secretKey'];//ключ шифрования паролей
-   $passwordEnc = __encode($pass, $key);//шифрование пароля
-
-   $sql = "SELECT `id`,`email`,`password`,`emailVerification`,`blocked`  FROM users WHERE email = '" . $login . "' AND `password` = '" . $passwordEnc . "'";
+   $sql = "SELECT id,email,`password`,emailVerification,blocked FROM users WHERE email = '$login';";
+   
    try{
       $sqlResult = mysqli_query($link, $sql);
    } catch (Exception $e){
@@ -91,15 +88,28 @@ function login($link, $result, $login, $pass){
   
    $numRows = mysqli_num_rows($sqlResult);
    if ($numRows <> 1) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['loginOrPassNC']; goto endFunc;
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotFound']; goto endFunc;
    }
    $row = mysqli_fetch_assoc($sqlResult);//парсинг
    if (empty($row['id']) || empty($row['email']) || empty($row['password'])) {
       $result['error']=true; $result['code'] = 500; $result['message'] = $errors['recognizeUnableDB']; goto endFunc;
    }
+   
+
+   $settings = getSettings($link);//Получение ключа шифрования. 
+   if ($settings == false) {
+      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endFunc;
+   }
+   $key = $settings['secretKey'];//ключ шифрования паролей
+   $passwordDec = __decode($row['password'], $key);//дешифрование пароля из БД
+   if ($passwordDec !== $pass){
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['wrongPassword']; goto endFunc;
+   }
+
    if(boolval($row['blocked'])===true){
       $result['error']=true; $result['code'] = 403; $result['message'] = $infoMessages['userBlocked']; goto endFunc;
    }
+
    $result['user'] = ['userId'=>$row['id']];
 
    endFunc:

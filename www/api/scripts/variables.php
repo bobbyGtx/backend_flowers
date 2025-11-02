@@ -80,9 +80,11 @@ $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
 $infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change! ';
 
-$authError['loginOrPassNC'] ='Login or password not correct! ';
-$authError['emailNotCorrect'] ='Email not correct! ';
-$authError['passwortNotCorrect'] ='Password not acceptable! ';
+$authError['loginOrPassNC'] ='Login or password not correct!';
+$authError['emailNotFound'] ='E-mail not found in DB!';//401
+$authError['wrongPassword'] ='Password wrong!';//401
+$authError['emailNotCorrect'] ='Email not correct!';//401
+$authError['passwortNotCorrect'] ='Password not acceptable!';//401
 $authError['refrTokenInvalid'] = 'Refresh token invalid! ';
 $authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 
