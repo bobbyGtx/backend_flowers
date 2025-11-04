@@ -106,7 +106,7 @@ function checkProducts(mysqli $link, array $result,array $productsPost){
   $types = str_repeat('i', count($products));
 
   //Формируем запрос
-  $sql = "SELECT `id`,`price`,`count`,`disabled`
+  $sql = "SELECT `id`,`count`,`disabled`
   FROM `products`  
   WHERE id IN ($placeholders)
   ORDER BY `id` ASC";
@@ -302,7 +302,7 @@ function getCart($link, $result, $userId){
   $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
   if (count($userCartItems)===0) {$result['userCartItems'] = []; goto endFunc;} // Если список пуст (пустой массив), завершаем
   
-  $result['userCartItems'] = $userCartItems;
+  $result['userCart'] = ["items"=>$userCartItems,"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];
 
   endFunc:
   return $result;

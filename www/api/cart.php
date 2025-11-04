@@ -52,8 +52,16 @@ if ($method === 'OPTIONS') {
   $result = getCart($link, $result, $userId);//$result['userCartItems']
   if ($result['error']){goto endRequest;}
   
-  $userCartItems = $result['userCartItems'];
-  unset($result['userCartItems'],$result['products']);
+  $userCartItems = $result['userCart']['items'];
+  $createdAt = time();
+  $updatedAt = null;
+  
+  if (count($userCartItems) > 0 && !empty($result['userCart']['createdAt'])){
+    $createdAt = $result['userCart']['createdAt'];
+    $updatedAt = time();
+  }
+
+  unset($result['userCart'],$result['products']);
   
   foreach($products as $product){
     $itemIndex = array_search($product['id'],array_column($userCartItems,'productId'),true);
@@ -63,6 +71,8 @@ if ($method === 'OPTIONS') {
       $userCartItems[$itemIndex]['quantity'] = $product['quantity'];
     }
   }//объединение массивов
+
+  $result = updateUserCart($link,$result,$userId,$userCartItems, $createdAt,$updatedAt);
 
   $result = compileUserCart($link,$result,$userCartItems, $userId, $reqLanguage);
   if ($result['error']){goto endRequest;}
