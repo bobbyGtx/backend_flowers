@@ -59,7 +59,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   
   $filterSQL='';
-  $sortSQL = '';
+  $sortSQL = " ORDER BY p.disabled ASC";
 
   if (is_array($getReq) && count($getReq) > 0) {
     //Передавать параметры types: types[]=str&types[]=str или types=str,str,str
@@ -77,7 +77,6 @@ function getProducts($link, $result, $getReq, $languageTag=''){
 
     
     $filters=[];
-    $sortSQL = '';
     
     if (!empty($types) && is_array($types) && count($types)>0){
       if (count($types)==1){
@@ -125,20 +124,21 @@ function getProducts($link, $result, $getReq, $languageTag=''){
     }//обработка максимальной цены
 
     //---------сортировка price-asc,price-desc,name-asc,name-desc
+    
     if (!empty($sort)){
       $sort = strtolower($sort);
       switch($sort){
         case "price-asc":
-          $sortSQL = " ORDER BY p.price ASC";
+          $sortSQL = "$sortSQL, p.price ASC";
           break;
         case "price-desc":
-          $sortSQL = " ORDER BY p.price DESC";
+          $sortSQL = "$sortSQL, p.price DESC";
           break;
         case "name-asc":
-          $sortSQL = " ORDER BY p.name$languageTag ASC";
+          $sortSQL = "$sortSQL, p.name$languageTag ASC";
           break;
         case "name-desc":
-          $sortSQL = " ORDER BY p.name$languageTag DESC";
+          $sortSQL = "$sortSQL, p.name$languageTag DESC";
           break;
         default:
           $result['error']=true; $result['code']=500; $result['message'] = $dataErr['sortRuleNotRec'] . "($funcName)";
