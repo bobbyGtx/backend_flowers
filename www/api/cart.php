@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
-header("Access-Control-Allow-Methods: OPTIONS, POST, GET, DELETE");
+header("Access-Control-Allow-Methods: OPTIONS, POST, PATCH, GET, DELETE");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
@@ -14,12 +14,65 @@ $reqLanguage = languageDetection(getallheaders());//Определение за�
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
   return;
-} elseif ($method === 'POST') {
+}elseif ($method === 'POST') {
+  include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include 'scripts/tokensOp.php';//Проверка токена
+  include 'scripts/cartOp.php';
+  //Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];
+
+  //Обработка входных данных products[{"productId": "x","quantity": "y"},{"productId": "x","quantity": "y"}]
+  $postData = json_decode(file_get_contents('php://input'), true);//получение запроса и парсинг
+  $productsPost = $postData['products'];
+  if(empty($productsPost) || !is_array($productsPost) || count($productsPost)===0) {
+   $result['error']=true; $result['code']=400; $result['message']=$dataErr['notRecognized']; goto endRequest;
+  }
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
+
+  $result = checkToken($link, $result, getallheaders(),true);
+  if ($result['error']) {
+    goto endRequest;//Если пришла ошибка - завршаем скрипт
+  } else {
+    if ($result['userId'] && $result['userPassword']){
+      $userId = $result['userId'];
+      $userPwd = $result['userPassword'];
+      unset($result['userId']); unset($result['userPassword']);
+    }else{
+      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    }
+  }
+
+  //Проверка товаров перед добавлением в корзину
+  $result = checkProducts($link,$result,$productsPost);//reuslt['products'] & result['messages']?
+  if ($result['error']){goto endRequest;}
+  $products = $result['products'];//Проверенные продукты готовые для добавления в корзину
+  
+  $result = getCart($link, $result, $userId);//$result['userCartItems']
+  if ($result['error']){goto endRequest;}
+  
+  $userCartItems = $result['userCartItems'];
+  unset($result['userCartItems'],$result['products']);
+  
+  foreach($products as $product){
+    $itemIndex = array_search($product['id'],array_column($userCartItems,'productId'),true);
+    if($itemIndex === false){
+      array_push($userCartItems,["quantity"=>$product['quantity'],"productId"=>$product['id']]);
+    }else{
+      $userCartItems[$itemIndex]['quantity'] = $product['quantity'];
+    }
+  }//объединение массивов
+
+  $result = compileUserCart($link,$result,$userCartItems, $userId, $reqLanguage);
+  if ($result['error']){goto endRequest;}
+
+} elseif ($method === 'PATCH') {
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/cartOp.php';
 
-  $result = ['error' => false, 'code' => 200, 'message' => 'Record changed'];//Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
 
   //{"productId": 1, "quantity": 2}
   //Обработка входных данных
@@ -32,9 +85,8 @@ if ($method === 'OPTIONS') {
   if ($postProductId<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (productId) not recognized!'; goto endRequest;}
   if ($postQuantity<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (quantity) not recognized!'; goto endRequest;}
 
-
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
-  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
 
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {
@@ -76,6 +128,7 @@ if ($method === 'OPTIONS') {
     $result = createUserCart($link, $result, $userId,$userCartItems);//Создание записи в таблице корзин, если такой не было
     if ($result['error']){goto endRequest;}
   }//Если записи карзины для этого пользователя в таблице нет, создаем запись и помещаем туда товар.
+  
   if ($numRows === 1){
     $userCartCreatedAt = $row['createdAt'];
     $userCartUpdatedAt = $row['updatedAt'];

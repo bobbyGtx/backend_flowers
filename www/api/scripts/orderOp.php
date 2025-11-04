@@ -8,20 +8,10 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
     goto endFunc;
   }
   if (!$link) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";
-    goto endFunc;
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;
   }
-  if (!is_array($userCartItems)) {
-    $result['error'] = true;
-    $result['message'] = $errors['productsNotFound'] . "($funcName)";
-    goto endFunc;
-  }
-  if (count($userCartItems) < 1) {
-    $result['count'] = 0;
-    goto endFunc;
-  }
+  if (!is_array($userCartItems)){$result['error'] = true;$result['message'] = $errors['productsNotFound'] . "($funcName)";goto endFunc;}
+  if (count($userCartItems) < 1) {$result['count'] = 0;goto endFunc;}
 
   //Подготовка запроса информации всех товаров из корзины пользователя
   $sqlStr = '';//Переменная для создания условия запроса (всё что после WHERE) 
@@ -45,11 +35,7 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
   try {
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e) {
-    $emessage = $e->getMessage();
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";
-    goto endFunc;
+    $emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
   }
 
   if (mysqli_num_rows($sqlResult) === 0) {

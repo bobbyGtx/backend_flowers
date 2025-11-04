@@ -87,8 +87,12 @@ if ($method === 'OPTIONS') {
   
 //-----Начинаем обработку карзины пользователя-----
 //-----Получение списка товаров в корзине пользователя-----
-  $result = getCart($link, $result, $userId); //true возвращает объект как массив
+  $result = getCart($link, $result, $userId);
   if ($result['error']){goto endRequest;}
+  if (count($result['userCartItems'])<1 ){
+    $result['error']=true; $result['code']=400; $result['message']=$errors['cartEmpty'];goto endRequest;
+  }//Если корзина пустая - ошибка
+
   $userCartItems = $result['userCartItems']; unset($result['userCartItems']);
 
 //-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----

@@ -54,6 +54,7 @@ $dbError['unexpResponse'] = 'Unexpected response from Database! ';
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 $dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
 $dbError['recordNotFound'] = 'Requested Record not found! ';
+$dbError['multipleRecords'] = 'Multiple records were found in the database! ';
 $dbError['recordsNotFound'] = 'Requested Records not found! ';
 $dbError['connectionError'] = 'DB connection Error! ';
 
