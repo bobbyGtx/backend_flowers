@@ -47,20 +47,11 @@ if ($method === 'OPTIONS') {
   $result = getProductShortInfo($link, $result, $postProductId, $reqLanguage);
   if ($result['error']) goto endRequest;
 
-  $row = $result['row']; unset($result['row']);
-  $product['id'] = $row['id'];
-  $product['name'] = $row['name'];
-  $product['price'] = $row['price'];
-  $product['image'] = $row['image'];
-  $product['url'] = $row['url'];
-
   //Добавление записи в избранное
   $result = addToFavorite($link,$result,$userId, $postProductId);
   if ($result['error']) goto endRequest;
 
-  $result['product'] = $product;
-
-  /* Ответ{
+  /* Ответ $result['product']{
     "id": "6660c46d5bd7273d906cdcce",
     "name": "Ливистона китайская",
     "url": "livistona_kitaiskaya",

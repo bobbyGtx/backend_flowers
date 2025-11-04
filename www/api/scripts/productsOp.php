@@ -1,32 +1,38 @@
 <?php
 function getProductShortInfo($link, $result, $productId, $languageTag=''){
-
-  //переделать запрос на явные поля!
   include 'variables.php';
-  $funcName = 'favoritesRequest_func';
+  $funcName = 'getProductShortInfo_func';
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
-  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`image`,`type_id`,`lightning$languageTag` as `lightning`,`humidity$languageTag` as `humidity`,`temperature$languageTag` as `temperature`,`height`,`diameter`,`url`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
+  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`image`,`url`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+
+  if ($response->num_rows==0){
+    $result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'] . "($funcName)";goto endFunc;
   }
 
-  if (mysqli_num_rows($sqlResult)===0){$result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'] . "($funcName)";goto endFunc;}
+  $row = $response->fetch_assoc();
+  if ($productId !== $row['id']){
+    $result['error']=true; $result['code'] = 500; $result['message'] = "Requestet productId != returned id from DB! ($funcName)"; goto endFunc;
+  }
 
-  $result['row'] = mysqli_fetch_assoc($sqlResult);
+  $row['ends'] = intval($row['count'])<$endsCount?true:false;//товар заканчивается
+  $result['product'] = $row;
 
   endFunc:
   return $result;
 }//Получение инфо о товаре по id
 
 function getProductCount($link, $result, $productId){
-
   //переделать запрос на явные поля!
   include 'variables.php';
   $funcName = 'getProducCount_func';
@@ -36,16 +42,18 @@ function getProductCount($link, $result, $productId){
   if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "SELECT `id`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
-  }
 
-  if (mysqli_num_rows($sqlResult)===0){$result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'] . "($funcName)";goto endFunc;}
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
 
-  $result['info'] = mysqli_fetch_assoc($sqlResult);
+  if ($response->num_rows==0){$result['error']=true; $result['code']=400;$result['message']=$errors['productNotFound'] . "($funcName)";goto endFunc;}
+
+  $result['info'] = $response->fetch_all(MYSQLI_ASSOC);
 
   endFunc:
   return $result;
