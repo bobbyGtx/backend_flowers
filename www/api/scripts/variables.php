@@ -90,4 +90,4 @@ $authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['recordChanged'] = 'Record changed!';
-$infoMessages['userBlocked'] = 'User blocked! ';
+$infoMessages['userBlocked'] = 'User blocked!';

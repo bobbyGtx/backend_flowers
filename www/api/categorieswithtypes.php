@@ -21,10 +21,7 @@ if ($method === 'OPTIONS') {
   $db_connect_response = dbConnect();
   $link = $db_connect_response['link'];//Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = 'DB connection Error! ' . $db_connect_response['message'];
-    goto endRequest;
+    $result['error'] = true;$result['code'] = 500;$result['message'] = 'DB connection Error! ' . $db_connect_response['message'];goto endRequest;
   }
 
   $sql="SELECT
@@ -42,9 +39,7 @@ if ($method === 'OPTIONS') {
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e) {
     $emessage = $e->getMessage();
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['selReqRejected'] . "(CategoriesWithTypes) ($emessage))";
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "(CategoriesWithTypes) ($emessage))";
     goto endRequest;
   }
 

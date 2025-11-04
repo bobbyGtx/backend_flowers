@@ -176,23 +176,25 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   t.category_id
   FROM products p INNER JOIN types t ON p.type_id = t.id";
   $sql = "$baseSQL$filterSQL$sortSQL LIMIT $offset, $productsPerPage;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
+
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  
+  if ($response->num_rows==0){
+        $result['response'] = ['page'=>1,'totalPages'=>1, 'totalProducts'=>0, 'products'=>[]];goto endFunc;
   }
   
-  if(mysqli_num_rows($sqlResult) == 0){
-    $result['response'] = ['page'=>1,'totalPages'=>1, 'totalProducts'=>0, 'products'=>[]];
-    goto endFunc;
-  }
-  $items = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);
+  // Получаем результат
+  $items = $response->fetch_all(MYSQLI_ASSOC);
   foreach($items as &$item){
     $item['type'] = ['id'=>$item['type_id'],'name'=>$item['typeName'],'url'=>$item['typeUrl']];
     unset($item['type_id'],$item['typeName'],$item['typeUrl']);
   }//преобразование типа продукта в объект
-
 
   // Считаем общее количество товаров
   $totalResult = mysqli_query($link, "SELECT COUNT(*) AS total FROM products p INNER JOIN types t ON p.type_id = t.id$filterSQL");
@@ -202,20 +204,8 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   $totalPages = ceil($total / $productsPerPage);
 
   $result['response'] = ['page'=>$page,'totalPages'=>$totalPages,'totalProducts'=>$total,'products'=>$items];
-
-  /*
-    SELECT p.id, p.name$languageTag, p.price, p.image, p.height, p.diameter, p.url, p.type_id, t.name$languageTag as typeName, t.url as typeUrl
-    FROM products p
-    INNER JOIN types t ON p.type_id = t.id
-    WHERE (t.url = 'flowering' OR t.url = 'palms')
-      AND p.height >= 16 AND p.height <= 100
-      AND p.diameter >= 10 AND p.diameter <= 20
-      AND p.price >= 14 AND p.price <= 40
-    ORDER BY p.price ASC; // p.name DESC
-  */
+  
   endFunc:
-  //$result['sql'] = $sql;
-  //$result['get'] = $getReq;
   return $result;
 }//Функция обработки запроса товаров с фильтрами
 

@@ -36,6 +36,7 @@ if ('OPTIONS' === $method) {
   $emailPost = $postDataJson["email"];//логин из запроса
   $passwordPost = $postDataJson["password"];//пароль из запроса
   $passwordRepeatPost = $postDataJson["passwordRepeat"];//пароль из запроса
+  $agree = $postDataJson["agree"];//соглашения
 
   if (empty($emailPost) || empty($passwordPost) || empty($passwordRepeatPost)) {
     $result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized']; goto endRequest;
@@ -50,6 +51,9 @@ if ('OPTIONS' === $method) {
     if ($passwordPost <> $passwordRepeatPost) {
       $result['error']=true; $messages[] ="Passwords don't match";
     } //проверка идентичности паролей
+    if ($passwordPost <> $passwordRepeatPost) {
+      $result['error']=true; $messages[] ="Agreements not accepted";
+    } //проверка принятия условий
     if ($result['error']==true) {
       $result['code'] = 406;$result['message'] = 'Data not Acceptable!'; $result['messages'] = $messages; goto endRequest;//error 406: unacceptable format
     }

@@ -74,11 +74,10 @@ function login($link, $result, $login, $pass){
       $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotCorrect']; goto endFunc;
     } 
     if (!preg_match($passwordRegEx, $pass)) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['passwortNotCorrect']; goto endFunc;
-    } 
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['wrongPassword']; goto endFunc;
+    } //Всё равно отдаем ошибку о ошибочном пароле
 
    $sql = "SELECT id,email,`password`,emailVerification,blocked FROM users WHERE email = '$login';";
-   
    try{
       $sqlResult = mysqli_query($link, $sql);
    } catch (Exception $e){
@@ -94,7 +93,6 @@ function login($link, $result, $login, $pass){
    if (empty($row['id']) || empty($row['email']) || empty($row['password'])) {
       $result['error']=true; $result['code'] = 500; $result['message'] = $errors['recognizeUnableDB']; goto endFunc;
    }
-   
 
    $settings = getSettings($link);//Получение ключа шифрования. 
    if ($settings == false) {
