@@ -27,86 +27,71 @@ function createUserCart($link,$result, $userId, $products = NULL){
   return $result;
 }
 
-function checkProduct(mysqli $link, array $result, int $productId, int $quantity){
+function checkProduct(mysqli $link, array $result, int $productId, int $quantity, $languageTag=''){
   include 'variables.php';
   $funcName = 'checkProduct_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
-  if (!$quantity){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
+  if (($quantity<0)){$result['error']=true; $result['code']=500; $result['message']=$errors['quantityNotFound'] . "($funcName)";}
 
+  if ($quantity === 0 ) goto endFunc;//Если удаляем продукт, то не проверяем наличие его в базе
   //Делаем запрос всех товаров из списка
-  $sql = "SELECT `id`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
-    goto endFunc;
-  }
-
-  if (mysqli_num_rows($sqlResult)===0){
-    $result['error']=true; $result['code']=500; $result['message']=$errors['productNotFound'] . "id=[$productId]"; goto endFunc;
+  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled`FROM `products` WHERE `id` = $productId;";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  if ($response->num_rows===0){
+    $result['error']=true; $result['code']=400; $result['message']=$errors['productNotFound'] . "id=[$productId]"; goto endFunc;
   }//Продукт не найден в таблице продуктов
-
-  $row = mysqli_fetch_array($sqlResult,MYSQLI_ASSOC);//парсинг
-  if (intval($row['id'])<>$productId){
+  
+  $product = $response->fetch_assoc();//парсинг
+  if (intval($product['id'])<>$productId){
     $result['error']=true; $result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)"; goto endFunc;
   }//В ответе идентификатор не найден или отличается от запрошенного
 
-  if ($row['disabled']){
-    $result['error']=true; $result['code']=400;
-    $result['message']=$infoErrors['productNotAvailable'];
+  if ($product['disabled']){
+    $result['error']=true; $result['code']=400;$result['message']=$infoErrors['productNotAvailable'];
     goto endFunc;
   }//Товар не доступен
-  if ((intval($row['count']) - $quantity)<0){
+
+  if ((intval($product['count']) - $quantity)<0){
     $result['error']=true; $result['code']=400;
-    $result['message']=$infoErrors['notEnoughtGoods'] . 'There are ' .$row['count']. " units of this product in stock out of $quantity.";
+    $result['message']=$infoErrors['notEnoughtGoods'] . 'There are ' .$product['count']. " units of this product in stock out of $quantity.";
     goto endFunc;
   }//Товара не достаточно
+  $product['quantity']=$quantity;
+  $result['product'] = $product;
   endFunc:
   return $result;
 }//Проверка наличия товаров в базе и достаточности на складе
 
-function checkProducts(mysqli $link, array $result,array $productsPost){
+function checkProducts(mysqli $link, array $result,array $products,$languageTag=''){
+  //Проверяет наличие продуктов в базе и возвращает готовый массив со всеми данными для вывода пользователю
   include 'variables.php';
   $funcName = 'checkProducts_func';
-  $dublicateMessage = 'Duplicates found and removed.';
   $notFoundMessage = 'Some products were not found in the database and have been removed!';
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if(empty($productsPost) || !is_array($productsPost) || count($productsPost)===0) {
+  if(empty($products) || !is_array($products) || count($products)===0) {
    $result['error']=true; $result['code']=400; $result['message']=$dataErr['notRecognized'] . "($funcName)"; goto endFunc;
   }
   $messages = [];
-  $products=[];
   $productIds=[];
-  foreach ($productsPost as $product) {
-    if (!empty($product['productId']) && !empty($product['quantity'])){
-      settype($product["productId"],"integer");
-      settype($product["quantity"],"integer");
-      if ($product["productId"]>0 && $product["quantity"]>0){
-        //Ищем дублирование
-        $foundIndex = array_search($product["productId"],array_column($products,"productId"),true);
-        if ($foundIndex!==false){
-          $products[$foundIndex]["quantity"] = $product["quantity"];//Если нашли совпадение, переносим новое количество
-          if (empty($messages['dublicates']))$messages['dublicates']=$dublicateMessage;
-        }else{
-          $products[]= $product;//Если совпадений нет - добавляем объект
-          $productIds[]=$product["productId"];
-        }
-      }
-    }
-  }//проверяем данные на правильность изаполняем новый массив
+  foreach ($products as $product) {$productIds[]=$product["productId"];}
 
   //Динамически создаем плейсхолдеры (?, ?, ?, ?)
   $placeholders = implode(',', array_fill(0, count($products), '?'));
   //Определяем типы параметров (все ID — целые числа) iiiii...
   $types = str_repeat('i', count($products));
-
   //Формируем запрос
-  $sql = "SELECT `id`,`count`,`disabled`
+  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled`
   FROM `products`  
   WHERE id IN ($placeholders)
   ORDER BY `id` ASC";
@@ -123,11 +108,13 @@ function checkProducts(mysqli $link, array $result,array $productsPost){
   if ($numRows!==count($products)) $messages["notFound"] = $notFoundMessage;
 
   $items = $response->fetch_all(MYSQLI_ASSOC);
+  $productsChecked=[];
   foreach ($items as &$item){
     if ($result['error']) continue;//если получили ошибку - пропускаем всё остальное
     $itemIndex = array_search($item['id'],array_column($products,"productId"),true);
     if ($itemIndex !== false){
       $item["quantity"] = $products[$itemIndex]["quantity"];
+      $productsChecked[]=["productId"=>$item["id"],"quantity"=>$item["quantity"]];
     }else{
       $result['error']=true;$result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)";
     }
@@ -135,6 +122,7 @@ function checkProducts(mysqli $link, array $result,array $productsPost){
   if ($result['error']) goto endFunc;
   if (count($items)<1){$result['error']=true;$result['code']=400;$result['message']=$errors['productsNotFound'] . "($funcName)";goto endFunc;}
   $result["products"]=$items;
+  $result["productsChecked"]=$productsChecked;
 
   endFunc:
   if (count(value: $messages)>0) $result["messages"] = array_values($messages);
@@ -167,12 +155,14 @@ function compileUserCart($link, $result, $userCartItems, $userId, $languageTag='
       if (!empty($quantities[$itemID]) && $quantities[$itemID]>0){
         $mergedRecords++;
       }
-      $quantities[$itemID] += $value['quantity'];
+      empty($quantities[$itemID])?$quantities[$itemID] = $value['quantity']:$quantities[$itemID] += $value['quantity'];
       $j++;
     }
   }
 
-  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled` FROM `products` WHERE $sqlStr;";
+  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled` 
+  FROM `products` 
+  WHERE $sqlStr;";
 
   try {
     $stmt = $link->prepare($sql);
@@ -184,22 +174,20 @@ function compileUserCart($link, $result, $userCartItems, $userId, $languageTag='
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
 
   if ($numRows===0){
-    if ($result['error']){goto endFunc;}
-    else{
-      if (count($userCartItems)>0){
-        $result = updateUserCart($link, $result, $userId, NULL,NULL,NULL);
-        if (!$result['error']){
-          $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
-        } else {goto endFunc;}
-      }
-      $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
+    if (count($userCartItems)>0){
+      $result = updateUserCart($link, $result, $userId, NULL,NULL,NULL);
+      if (!$result['error']){
+        $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
+      } else {goto endFunc;}
     }
+    $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
+  
   }//Если нет записи в таблице - создаем и завершаем запрос
 
   $rows = $response->fetch_all(MYSQLI_ASSOC);//парсинг 
 
   if (count($rows) <> count($userCartItems)){
-    //Оптимизация продуктов и их сохранение в карзине
+    //Оптимизация продуктов и их сохранение в корзине
     $newProducts=[];
     foreach($rows as $product){
       $newProducts[]=['quantity'=>$quantities[$product['id']],'productId'=>$product['id']];
@@ -229,25 +217,66 @@ function compileUserCart($link, $result, $userCartItems, $userId, $languageTag='
   return $result;
 }//Функция для генерации необходимого списка товаров в корзине
 
+function formatUserCart(array $result, array $products, $createdAt, $updatedAt):array{
+  include 'scripts/variables.php';
+  $funcName = 'formatUserCart_func';
+  if ($result['error']){goto endFunc;}
+  if (!is_array($products)){$result['error']=true; $result['message'] = $errors['productNotFound'] . "($funcName)"; goto endFunc;}
+  if (count($products)===0){
+    $result['items'] = [];
+    $result['count'] = 0;
+    $result['createdAt']=intval($createdAt);
+    $result['updatedAt']=intval($updatedAt);
+    goto endFunc;}
+
+  $items=[];
+  $totalCount=0;
+  foreach ($products as $product) {
+    $item['quantity'] = $product['quantity'];
+    $totalCount+=$product['quantity'];
+    unset($product['quantity']);
+    $item['product'] = $product;
+    $items[]=$item;
+  }
+  $result['count'] = $totalCount;
+  $result['createdAt']=intval($createdAt);
+  $result['updatedAt']=intval($updatedAt);
+  $result['items']=$items;
+  endFunc:
+
+  return $result;
+}
+
 function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updatedAt){
   include 'variables.php';
   $funcName = 'updateUserCart_func';
-  //$result['itemList'] = $itemList;
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   //- Filtered - обозначает чистку корзины от не найденных в БД артиклей 
   
-  if (empty($itemList) || !is_array($itemList)){
+  if (is_array($itemList) && count($itemList)>0){
+    $itemList = array_values($itemList);
+    $itemListSQL = "'".json_encode($itemList)."'";
+  }elseif(is_array($itemList) && count($itemList)===0){
     $itemListSQL = 'NULL';
+    $createdAt = 'NULL';
+    $updatedAt = time();
   }else{
-    $itemListSQL = json_encode($itemList);
+    $itemListSQL = NULL;
   }
-  if (intval($createdAt)){$createdAt = ",`createdAt`= $createdAt";} else {unset($createdAt);}
-  if (intval($updatedAt)){$updatedAt = ",`updatedAt`= $updatedAt";} else {unset($updatedAt);}
+
+  if (empty($createdAt) || is_null($createdAt)){
+    $createdAt=', createdAt=NULL';
+  }else $createdAt = ", createdAt= $createdAt";
+  if (empty($updatedAt) || is_null($updatedAt)){
+    $updatedAt=', updatedAt=NULL';
+  }else $updatedAt = ", updatedAt= $updatedAt";
+  
   //сохранение корзины
-  $sql = "UPDATE `carts` SET `items`='$itemListSQL' $createdAt $updatedAt WHERE `user_id` = $userId;";
+  $sql = "UPDATE carts SET items = $itemListSQL$createdAt$updatedAt WHERE user_id = $userId;";
+  //$result['sql']=$sql;
   try{
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -285,7 +314,6 @@ function getCart($link, $result, $userId){
   if (empty($userId) ||$userId<1){$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql= "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id` = $userId;";
-
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -294,19 +322,24 @@ function getCart($link, $result, $userId){
     $stmt->close();
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
   $numRows = $response->num_rows;
-  if ($numRows === 0){$result['error']=true; $result['code']=500; $result['message']=$dbError['cartNotFound'] . "($funcName)";}
+  if ($numRows === 0){
+    $result = createUserCart($link,$result,$userId,null);
+    $result['userCart'] = ["items"=>[],"createdAt"=> 0,"updatedAt"=> 0];goto endFunc;
+  }//Создаем запись корзины для пользователя
   if ($numRows > 1){$result['error']=true; $result['code']=500; $result['message']=$dbError['multipleRecords'] . "($funcName)";}
-  
   $userCart = $response->fetch_assoc();//парсинг
-  if (empty($userCart['items'])){$result['userCartItems'] = []; goto endFunc;} //Если поле пустое, завершаем
+  if (empty($userCart['items'])){$result['userCart'] = ["items"=>[],"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];goto endFunc;} //Если поле пустое, завершаем
   $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
-  if (count($userCartItems)===0) {$result['userCartItems'] = []; goto endFunc;} // Если список пуст (пустой массив), завершаем
   
-  $result['userCart'] = ["items"=>$userCartItems,"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];
+  foreach ($userCartItems as $cartItem) {
+    if (empty($cartItem['quantity']) || empty($cartItem['productId'])) unset($cartItem);
+  }//ремонт массива в случае проблем с данными. Просто удаляем поврежденные записи
+  $result['userCart'] = ["items"=>array_values($userCartItems),"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];
 
   endFunc:
   return $result;
 }//Получение данных корзины пользователя
+
 function clearUserCart($link, $result, $userId){
   include 'variables.php';
   $funcName = 'clearUserCart'.'_func';

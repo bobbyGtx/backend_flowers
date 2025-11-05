@@ -58,7 +58,7 @@ $dbError['multipleRecords'] = 'Multiple records were found in the database! ';
 $dbError['recordsNotFound'] = 'Requested Records not found! ';
 $dbError['connectionError'] = 'DB connection Error! ';
 
-$errors['productNotFound'] = 'Product not found! ';
+$errors['productNotFound'] = 'Product not found! ';//400
 $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
 $errors['dataNotFound'] = 'No data was passed to the function or it was incorrect. ';
