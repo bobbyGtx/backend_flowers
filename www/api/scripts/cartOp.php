@@ -200,11 +200,10 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updated
   return $result;
 }
 
-function calculateCartCount($link, $result, $userCartItems){
+function calculateCartCount($result, $userCartItems){
   include 'variables.php';
   $funcName = 'calculateCartCount_func';
   if (empty($result) || $result['error']){goto endFunc;}
-  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!is_array($userCartItems)){$result['error']=true; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;}
   if (count($userCartItems)<1){$result['count'] = 0; goto endFunc;}
   $counter=0;

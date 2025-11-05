@@ -164,9 +164,6 @@ if ($method === 'OPTIONS') {
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {goto endRequest;}
   if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
-
-  
- 
  
   $result = getCart($link,$result,$userId);
   if ($result['error']) {goto endRequest;}
@@ -174,6 +171,12 @@ if ($method === 'OPTIONS') {
   $createdAt = $result['userCart']['createdAt'];
   $updatedAt = $result['userCart']['updatedAt'];
   unset($result['userCart']);
+
+  if (isset($_GET["cartCount"]) && boolval($_GET["cartCount"]) === true){
+    $result = calculateCartCount($result, $products);
+    if ($result['error']) {goto endRequest;}
+    goto endRequest;
+  }
 
   if (count($products)===0){
     $result = formatUserCart($result,$product,$createdAt,$updatedAt);
