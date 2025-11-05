@@ -155,78 +155,57 @@ if ($method === 'OPTIONS') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/cartOp.php';
-  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!'];//Создание массива с ответом Ок
-  $priorityMsg = null; //Добавочное сообщение на случай не критической ошибка. Добавляется к ответу вместо message в конце успешной обработки соответств. запроса
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
   $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
   
   if ($db_connect_response['error'] == true || !$link) {
     $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
   }
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-    }
-  }
-
-  $result = ['error' => false, 'code' => 200, 'message' => 'Request success!', 'count' => 0];//Создание массива с ответом Ок
-  //Получение корзины пользователя
-  $sql = "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id`= $userId;";
-  try{
-  $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']="Insert request rejected by database. (UserRegister->InsertCart) ($emessage))";goto endRequest;
-  }
-
-  $result['createdAt'] = 0;$result['updatedAt'] = 0;$result['items'] = [];//Корректировка массива с ответом Ок
-  if (mysqli_num_rows($sqlResult)===0){
-    $result = createUserCart($link,$result,$userId);
-    if ($result['error']){
-      goto endRequest;
-    } else {
-      if (isset($_GET["cartCount"])){
-        unset($result['items']); 
-        unset($result['createdAt']); 
-        unset($result['updatedAt']); 
-        goto endRequest;
-      }// Обработка запроса количества товара
-      $result['items'] = []; $result['itemsInCart'] = 0;goto endRequest;
-      }
-  }//Если нет записи в таблице - создаем ответ и завершаем запрос
-
-  $row = mysqli_fetch_array($sqlResult);//парсинг 
-  if (isset($_GET["cartCount"])){
-    unset($result['items']); 
-    unset($result['createdAt']); 
-    unset($result['updatedAt']); 
-    if (empty($row['items'])){goto endRequest;} //Если поле пустое, завершаем
-    $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
-    if (count($userCartItems)===0) {goto endRequest;} // Если список пуст (пустой массив), завершаем
-    $result = calculateCartCount($link, $result, $userCartItems);
-    goto endRequest;
-  }// Обработка запроса количества товара
-
-  //$result['createdAt']= $row['createdAt'];
-  //$result['updatedAt'] = $row['updatedAt'];
-  $result['createdAt']= is_null($row['createdAt'])?$row['createdAt']:date("Y-m-d H:i:s", $row['createdAt']);
-  $result['updatedAt'] = is_null($row['updatedAt'])?$row['updatedAt']:date("Y-m-d H:i:s", $row['updatedAt']);
-  if (empty($row['items'])){
-    goto endRequest;
-  }else{
-    $userCartItems = json_decode($row['items'],true); //true возвращает объект как массив
-    if (count($userCartItems)===0) {goto endRequest;}
-  }
-  $result = compileUserCart($link, $result,$userCartItems, $userId,$reqLanguage);
-  if ($result['error']){goto endRequest;}
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
 
   
+ 
+ 
+  $result = getCart($link,$result,$userId);
+  if ($result['error']) {goto endRequest;}
+  $products = $result['userCart']['items'];
+  $createdAt = $result['userCart']['createdAt'];
+  $updatedAt = $result['userCart']['updatedAt'];
+  unset($result['userCart']);
+
+  if (count($products)===0){
+    $result = formatUserCart($result,$product,$createdAt,$updatedAt);
+    goto endRequest;
+  }
+
+  $result = checkProducts($link, $result, $products, $reqLanguage);
+  if ($result['error']) {
+    if (isset($result['cartAction']) && $result['cartAction']==='clear'){
+      $result['error']=false;$result['code']=200; unset($result['messages'],$result['cartAction']);
+      $result = clearUserCart($link,$result,$userId);
+      $result = formatUserCart($result,[],null,time());
+      $result['error']=true; $result['code']=200;$result['message']=$infoErrors['cartClearedBySystem'];
+    }
+    goto endRequest;
+  }//Чистим корзину если найдены неизвестные товары и выводим результат с ошибкой
+  
+  if (isset($result['cartAction']) && $result['cartAction'] ==='fix'){
+    $productsList = $result["productsChecked"]; unset($result["productsChecked"],$result['cartAction']);
+    $checkedProductsList = $result["products"];unset($result["products"]);
+    if (count($productsList)>0 && count($productsList)<count($products)){
+      $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
+      $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
+      $result['error']=true; $result['code']=200;$result['message']=$infoErrors['cartClearedBySystem'];
+      goto endRequest;
+    }//доп проверка проблем в корзине
+  }//в корзине найдены неопознанные товары. Корзина будет перезаписана только известными
+
+  $checkedProductsList = $result["products"];unset($result["products"],$result["productsChecked"]);
+
+  $result = formatUserCart($result, $checkedProductsList,$createdAt, $updatedAt);
+  if ($result['error']) {goto endRequest;}
 
 } elseif ($method === 'DELETE'){
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
@@ -252,13 +231,15 @@ if ($method === 'OPTIONS') {
     }
   $result = clearUserCart($link, $result, $userId);
   if ($result['error']) goto endRequest; //на всякий случай
-
+  $result = formatUserCart($result,[],null,time());
+  if ($result['error']) goto endRequest; //на всякий случай
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }
 
 endRequest:
 if (!empty($link)) mysqli_close($link);
+if (isset($result['cartAction'])) unset($result['cartAction']);//удаление внутреннего флага
 http_response_code($result['code']); unset($result['code']);
 echo json_encode($result);
 

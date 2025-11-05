@@ -80,6 +80,8 @@ $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
 $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
 $infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change! ';
+$infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system. Unrecognized items were found.';
+$infoErrors['someProductsRemoved'] = 'Unrecognized products were found and removed.';
 
 $authError['loginOrPassNC'] ='Login or password not correct!';
 $authError['emailNotFound'] ='E-mail not found in DB!';//401

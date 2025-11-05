@@ -104,8 +104,8 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
     $stmt->close();
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
   $numRows = $response->num_rows;
-  if ($numRows==0){$result['error']=true;$result['code']=400;$result['message']=$errors['productsNotFound'] . "($funcName)";goto endFunc;}
-  if ($numRows!==count($products)) $messages["notFound"] = $notFoundMessage;
+  if ($numRows==0){$result['error']=true;$result['code']=400;$result['message']=$errors['productsNotFound']; $result['cartAction']='clear'; goto endFunc;}
+  if ($numRows!==count($products)){ $messages["notFound"] = $notFoundMessage; $result['cartAction']='fix';}
 
   $items = $response->fetch_all(MYSQLI_ASSOC);
   $productsChecked=[];
@@ -128,94 +128,6 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   if (count(value: $messages)>0) $result["messages"] = array_values($messages);
   return $result;//Возвращаем массив продуктов и колличества имеющихся в базе айдишников + сообщения обработки
 }//Функция проверки массива товаров на наличие в базе перед добавлением в корзину (проверка id)
-
-function compileUserCart($link, $result, $userCartItems, $userId, $languageTag=''){
-  include 'scripts/variables.php';
-  $funcName = 'compileUserCart_func';
-  //В result уже должны быть метки даты создания и изменения
-  if ($result['error']){goto endFunc;}
-  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!is_array($userCartItems)){$result['error']=true; $result['message'] = $errors['productNotFound'] . "($funcName)"; goto endFunc;}
-  if (count($userCartItems)===0){$result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;}
-  $messages=[];
-  //Подготовка запроса информации всех товаров из корзины пользователя
-  $sqlStr='';//Переменная для создания условия запроса (всё что после WHERE) 
-  $j=0;
-  $quantities=[];
-  $mergedRecords = 0;//кол-во объединенных записей
-  foreach($userCartItems as $value){
-    $itemID = $value['productId'];
-    settype($itemID, 'integer');
-    if ($itemID > 0){
-      if ($j===0){
-        $sqlStr="`id`= $itemID";
-      }else{
-        $sqlStr=$sqlStr." OR `id`= $itemID";
-      }
-      if (!empty($quantities[$itemID]) && $quantities[$itemID]>0){
-        $mergedRecords++;
-      }
-      empty($quantities[$itemID])?$quantities[$itemID] = $value['quantity']:$quantities[$itemID] += $value['quantity'];
-      $j++;
-    }
-  }
-
-  $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled` 
-  FROM `products` 
-  WHERE $sqlStr;";
-
-  try {
-    $stmt = $link->prepare($sql);
-    if (!$stmt) {throw new Exception($link->error);}
-    $stmt->execute(); 
-    $response = $stmt->get_result();
-    $numRows = $response->num_rows;
-    $stmt->close();
-  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
-
-  if ($numRows===0){
-    if (count($userCartItems)>0){
-      $result = updateUserCart($link, $result, $userId, NULL,NULL,NULL);
-      if (!$result['error']){
-        $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
-      } else {goto endFunc;}
-    }
-    $result['items'] = []; $result['itemsInCart'] = 0;goto endFunc;
-  
-  }//Если нет записи в таблице - создаем и завершаем запрос
-
-  $rows = $response->fetch_all(MYSQLI_ASSOC);//парсинг 
-
-  if (count($rows) <> count($userCartItems)){
-    //Оптимизация продуктов и их сохранение в корзине
-    $newProducts=[];
-    foreach($rows as $product){
-      $newProducts[]=['quantity'=>$quantities[$product['id']],'productId'=>$product['id']];
-    }
-    $result = updateUserCart($link, $result, $userId, $newProducts, NULL, time());
-    unset($newProducts);
-    //Выводим сообщение о причине группировки
-    $recordsLost = count($userCartItems) - count($rows) - $mergedRecords;
-    if ($recordsLost>0){
-      //Если есть не найденные данные, сообщаем о их кол-ве
-      $messages[] = 'Some ['. count($userCartItems) - count($rows) .'] products were not found in the database and were removed from the cart.' . "($funcName)";
-    } else{
-      //Если есть сгруппированные товары, сообщаем о их кол-ве
-      $messages[] = "Products were combined $mergedRecords times!";
-    }
-  }
-  $products=[]; $counter = 0; //$quantities - quantities
-
-  foreach($rows as $product){
-    $products[]=['quantity'=>$quantities[$product['id']],'product'=>$product];
-    $counter = $counter + $quantities[$product['id']];
-  }
-  $result['items'] = $products; $result['count'] = $counter;
-  if (count($messages)>0){$result['messages'] = is_array($result['messages'])? array_merge($result['messages'],$messages):$messages;}
-
-  endFunc:
-  return $result;
-}//Функция для генерации необходимого списка товаров в корзине
 
 function formatUserCart(array $result, array $products, $createdAt, $updatedAt):array{
   include 'scripts/variables.php';
@@ -266,14 +178,14 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updated
   }else{
     $itemListSQL = NULL;
   }
-
+  if ($createdAt===0 && $updatedAt===0) $createdAt = time();
   if (empty($createdAt) || is_null($createdAt)){
     $createdAt=', createdAt=NULL';
   }else $createdAt = ", createdAt= $createdAt";
   if (empty($updatedAt) || is_null($updatedAt)){
     $updatedAt=', updatedAt=NULL';
   }else $updatedAt = ", updatedAt= $updatedAt";
-  
+
   //сохранение корзины
   $sql = "UPDATE carts SET items = $itemListSQL$createdAt$updatedAt WHERE user_id = $userId;";
   //$result['sql']=$sql;
@@ -328,13 +240,13 @@ function getCart($link, $result, $userId){
   }//Создаем запись корзины для пользователя
   if ($numRows > 1){$result['error']=true; $result['code']=500; $result['message']=$dbError['multipleRecords'] . "($funcName)";}
   $userCart = $response->fetch_assoc();//парсинг
-  if (empty($userCart['items'])){$result['userCart'] = ["items"=>[],"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];goto endFunc;} //Если поле пустое, завершаем
+  if (empty($userCart['items'])){$result['userCart'] = ["items"=>[],"createdAt"=> intval($userCart["createdAt"]),"updatedAt"=> intval($userCart["updatedAt"])];goto endFunc;} //Если поле пустое, завершаем
   $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
   
   foreach ($userCartItems as $cartItem) {
     if (empty($cartItem['quantity']) || empty($cartItem['productId'])) unset($cartItem);
   }//ремонт массива в случае проблем с данными. Просто удаляем поврежденные записи
-  $result['userCart'] = ["items"=>array_values($userCartItems),"createdAt"=> $userCart["createdAt"],"updatedAt"=> $userCart["updatedAt"]];
+  $result['userCart'] = ["items"=>array_values($userCartItems),"createdAt"=> intval($userCart["createdAt"]),"updatedAt"=> intval($userCart["updatedAt"])];
 
   endFunc:
   return $result;
