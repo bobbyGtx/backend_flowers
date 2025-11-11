@@ -3,7 +3,7 @@ header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: OPTIONS, POST, PATCH, GET, DELETE");
 header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Access-Token, X-Language");
 
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -22,20 +22,20 @@ if ($method === 'OPTIONS') {
   //Создание массива с ответом Ок
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];
 
-  //Обработка входных данных products[{"productId": "x","quantity": "y"},{"productId": "x","quantity": "y"}]
+  //Обработка входных данных products[{"id": "x","quantity": "y"},{"id": "x","quantity": "y"}]
   $postData = json_decode(file_get_contents('php://input'), true);//получение запроса и парсинг
-  $productsPost = $postData['products'];
-  if(empty($productsPost) || !is_array($productsPost) || count($productsPost)===0) {
+  if (!isset($postData['products']) || !is_array($postData['products']) || count($postData['products'])===0){
    $result['error']=true; $result['code']=400; $result['message']=$dataErr['notRecognized']; goto endRequest;
   }
+  $productsPost = $postData['products'];
   $products = [];//массив для отфильтрованных продуктов
   foreach ($productsPost as $product) {
-    if (isset($product['quantity']) && isset($product['productId']) && intval($product['quantity'])>0 && intval($product['productId'])>0){
-      $findedIndex = array_search(intval($product['productId']),array_column($products,'productId'),true);
+    if (isset($product['quantity']) && isset($product['id']) && intval($product['quantity'])>0 && intval($product['id'])>0){
+      $findedIndex = array_search(intval($product['id']),array_column($products,'id'),true);
       if ($findedIndex===false){
-        $products[]=["productId"=>intval($product['productId']),"quantity"=>intval($product['quantity'])];
+        $products[]=["id"=>intval($product['id']),"quantity"=>intval($product['quantity'])];
       }else{
-        $products[$findedIndex]=["productId"=>intval($product['productId']),"quantity"=>intval($product['quantity'])];
+        $products[$findedIndex]=["id"=>intval($product['id']),"quantity"=>intval($product['quantity'])];
       }
     }
   }
@@ -73,16 +73,18 @@ if ($method === 'OPTIONS') {
 
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
 
-  //{"productId": 1, "quantity": 2}
+  //{"id": 1, "quantity": 2}
   //Обработка входных данных
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
-  settype($postDataJson['productId'], 'integer');//защита от инъекции
-  $postProductId = $postDataJson['productId'];
-  settype($postDataJson['quantity'], 'integer');//защита от инъекции
-  $postQuantity = $postDataJson['quantity'];
-  if ($postProductId<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (productId) not recognized!'; goto endRequest;}
-  if ($postQuantity<0){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (quantity) not recognized!'; goto endRequest;}
+  if (isset($postDataJson['id'])){
+    settype($postDataJson['id'], 'integer');//защита от инъекции
+    $postProductId = $postDataJson['id'];
+  } else {$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (id) not recognized!'; goto endRequest;}
+  if (array_key_exists('quantity',$postDataJson)){
+    settype($postDataJson['quantity'], 'integer');//защита от инъекции
+    $postQuantity = $postDataJson['quantity'];
+  } else {$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (quantity) not recognized!'; goto endRequest;}
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
@@ -94,7 +96,7 @@ if ($method === 'OPTIONS') {
   //Проверка товара перед добавлением в корзину
   $result = checkProduct($link,$result,$postProductId,$postQuantity, $reqLanguage);
   if ($result['error']){goto endRequest;}
-  $product = $result['product']; unset($result['product']);
+$product = $result['product'];unset($result['product']);
 
   //Получение корзины пользователя для объединения новых со старыми товарами
   $result = getCart($link, $result, $userId);
@@ -107,15 +109,15 @@ if ($method === 'OPTIONS') {
   if (count($userCartItems) === 0 ){
     if ($postQuantity>0){
       //корзина только создана, если количество товара больше 0
-      array_push($userCartItems,["quantity"=>$postQuantity,"productId"=>$postProductId]);
+      array_push($userCartItems,["quantity"=>$postQuantity,"id"=>$postProductId]);
       $createdAt = time();
       $updatedAt = null;
     }
   }else{
-    $itemIndex = array_search($postProductId,array_column($userCartItems,'productId'),true);
+    $itemIndex = array_search($postProductId,array_column($userCartItems,'id'),true);
     if ($itemIndex === false){
       if ($postQuantity>0) {
-        array_push($userCartItems,["quantity"=>$postQuantity,"productId"=>$postProductId]);
+        array_push($userCartItems,["quantity"=>$postQuantity,"id"=>$postProductId]);
         $updatedAt = time();
       }
     }else{
@@ -132,13 +134,12 @@ if ($method === 'OPTIONS') {
   $result = updateUserCart($link, $result, $userId, $userCartItems, $createdAt, $updatedAt);
   if ($result["error"]){goto endRequest;}
 
-
   if (count($userCartItems)===0){
     $result = formatUserCart($result, [],$createdAt,$updatedAt);
     goto endRequest;
   }//Если удалили последний товар из корзины - формируем ответ и выходим
 
-  if (count($userCartItems)===1 && $userCartItems[0].['productId']===$postProductId){
+  if (count($userCartItems)===1 && $userCartItems[0]['id']===$postProductId){
     $result = formatUserCart($result, [$product],$createdAt,$updatedAt);
     goto endRequest;
   } //Если единственный продукт в корзине, это добавленный - выводим его в ответ без запроса
@@ -179,7 +180,8 @@ if ($method === 'OPTIONS') {
   }
 
   if (count($products)===0){
-    $result = formatUserCart($result,$product,$createdAt,$updatedAt);
+    $products=[];
+    $result = formatUserCart($result,$products,$createdAt,$updatedAt);
     goto endRequest;
   }
 

@@ -70,10 +70,9 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   $sortSQL = " ORDER BY p.disabled ASC";
 
   if (is_array($getReq) && count($getReq) > 0) {
-    //Передавать параметры types: types[]=str&types[]=str или types=str,str,str
-    if ($getReq['types']){
-      $types=is_array($getReq['types'])?$getReq['types']:explode(',', $_GET['types']);
-    }
+    if (isset($getReq['types'])){
+      $types=is_array($getReq['types'])?$getReq['types']:null;
+    }//Передавать параметры types: types[]=str&types[]=str
     $diameterFrom = !empty($getReq['diameterFrom'])?$getReq['diameterFrom']:null;
     $diameterTo = !empty($getReq['diameterTo'])?$getReq['diameterTo']:null;
     $heightFrom = !empty($getReq['heightFrom'])?$getReq['heightFrom']:null;

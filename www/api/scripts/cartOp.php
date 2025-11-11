@@ -34,8 +34,9 @@ function checkProduct(mysqli $link, array $result, int $productId, int $quantity
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
   if (($quantity<0)){$result['error']=true; $result['code']=500; $result['message']=$errors['quantityNotFound'] . "($funcName)";}
-
-  if ($quantity === 0 ) goto endFunc;//Если удаляем продукт, то не проверяем наличие его в базе
+  
+  //Если удаляем продукт, то не проверяем наличие его в базе
+  if ($quantity === 0 ) {$result['product']=["id"=>$productId,"quantity"=>0];goto endFunc;}
   //Делаем запрос всех товаров из списка
   $sql = "SELECT `id`,`name$languageTag` AS `name`,`price`,`image`,`url`,`count`,`disabled`FROM `products` WHERE `id` = $productId;";
   try {
@@ -84,7 +85,7 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   }
   $messages = [];
   $productIds=[];
-  foreach ($products as $product) {$productIds[]=$product["productId"];}
+  foreach ($products as $product) {$productIds[]=$product["id"];}
 
   //Динамически создаем плейсхолдеры (?, ?, ?, ?)
   $placeholders = implode(',', array_fill(0, count($products), '?'));
@@ -111,10 +112,10 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   $productsChecked=[];
   foreach ($items as &$item){
     if ($result['error']) continue;//если получили ошибку - пропускаем всё остальное
-    $itemIndex = array_search($item['id'],array_column($products,"productId"),true);
+    $itemIndex = array_search($item['id'],array_column($products,"id"),true);
     if ($itemIndex !== false){
       $item["quantity"] = $products[$itemIndex]["quantity"];
-      $productsChecked[]=["productId"=>$item["id"],"quantity"=>$item["quantity"]];
+      $productsChecked[]=["id"=>$item["id"],"quantity"=>$item["quantity"]];
     }else{
       $result['error']=true;$result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)";
     }
@@ -133,13 +134,12 @@ function formatUserCart(array $result, array $products, $createdAt, $updatedAt):
   include 'scripts/variables.php';
   $funcName = 'formatUserCart_func';
   if ($result['error']){goto endFunc;}
-  if (!is_array($products)){$result['error']=true; $result['message'] = $errors['productNotFound'] . "($funcName)"; goto endFunc;}
+
+  if (!is_array($products)){$result['error']=true; $result['code']=400;$result['message'] = $errors['productNotFound'] . "($funcName)"; goto endFunc;}
   if (count($products)===0){
-    $result['items'] = [];
-    $result['count'] = 0;
-    $result['createdAt']=intval($createdAt);
-    $result['updatedAt']=intval($updatedAt);
-    goto endFunc;}
+    $result['cart']=["count"=>0,"createdAt"=>intval($createdAt),"updatedAt"=>intval($updatedAt), "items"=>[]];
+    goto endFunc;
+  }
 
   $items=[];
   $totalCount=0;
@@ -150,10 +150,7 @@ function formatUserCart(array $result, array $products, $createdAt, $updatedAt):
     $item['product'] = $product;
     $items[]=$item;
   }
-  $result['count'] = $totalCount;
-  $result['createdAt']=intval($createdAt);
-  $result['updatedAt']=intval($updatedAt);
-  $result['items']=$items;
+  $result['cart']=["count"=>$totalCount,"createdAt"=>intval($createdAt),"updatedAt"=>intval($updatedAt), "items"=>$items];
   endFunc:
 
   return $result;
@@ -214,7 +211,6 @@ function calculateCartCount($result, $userCartItems){
   endFunc:
   return $result;
 }
-
 function getCart($link, $result, $userId){
   include 'variables.php';
   $funcName = 'getCart_func';
@@ -243,7 +239,7 @@ function getCart($link, $result, $userId){
   $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив
   
   foreach ($userCartItems as $cartItem) {
-    if (empty($cartItem['quantity']) || empty($cartItem['productId'])) unset($cartItem);
+    if (empty($cartItem['quantity']) || empty($cartItem['id'])) unset($cartItem);
   }//ремонт массива в случае проблем с данными. Просто удаляем поврежденные записи
   $result['userCart'] = ["items"=>array_values($userCartItems),"createdAt"=> intval($userCart["createdAt"]),"updatedAt"=> intval($userCart["updatedAt"])];
 

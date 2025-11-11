@@ -4,9 +4,10 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    include 'variables.php';
    $funcName = 'checkToken'.'_func';
    $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
-   $http_AccessToken = $http_Headers[$accessTokenHeader];
+   $http_AccessToken = isset($http_Headers[$accessTokenHeader])?$http_Headers[$accessTokenHeader]:null;
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
-      $result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
+      $result['error'] = true;$result['code'] = 401;$result['message'] = 'Authorisation error.'; return $result;
+      //$result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
    }
 
    $sql = "SELECT `id`, `password`,`$accTokenField`,`$accTokenLifeField` FROM `$userTableName` WHERE `$accTokenField` = '" . $http_AccessToken . "'";

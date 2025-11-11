@@ -61,7 +61,7 @@ function getUserInfo($link, $result, $userId, $languageTag = ''){
 
 function login($link, $result, $login, $pass){
    include 'variables.php';
-   $funcName = 'login'.'_func';
+   $funcName = 'login_func';
 
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
