@@ -63,6 +63,8 @@ $errors['productsNotFound'] = 'Products not found! ';
 $errors['userDataNotFound'] = 'User ID not found! ';
 $errors['dataNotFound'] = 'No data was passed to the function or it was incorrect. ';
 $errors['cartEmpty'] = 'Critical error! User cart empty! ';
+$errors['unexpectedFuncResult'] = 'Unexpected result from function! ';
+$errors['cartRebaseImpossible'] = 'Cart rebase impossible. User have a cart!';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
 $errors['dataNotAcceptable'] = 'Data not Acceptable!';
@@ -92,5 +94,6 @@ $authError['refrTokenInvalid'] = 'Refresh token invalid! ';
 $authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 
 $infoMessages['reqSuccess'] = 'Request success!';
+$infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['userBlocked'] = 'User blocked!';

@@ -20,7 +20,7 @@ if ($method === 'OPTIONS') {
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/cartOp.php';
   //Создание массива с ответом Ок
-  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['сartRebased']];
 
   //Обработка входных данных products[{"id": "x","quantity": "y"},{"id": "x","quantity": "y"}]
   $postData = json_decode(file_get_contents('php://input'), true);//получение запроса и парсинг
@@ -51,6 +51,11 @@ if ($method === 'OPTIONS') {
   if ($result['error']) {goto endRequest;}
   if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
 
+  //Проверка корзины пользователя. Если в ней что-то есть, отменяем перебазирование
+  $result = checkUserCart($result,$link,$userId);
+  if ($result['error']) {goto endRequest;}
+  if (!isset($result['noCart']) || $result['noCart']<>true) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['unexpectedFuncResult']."(checkUserCart)";goto endRequest;}
+  unset($result['noCart']);
   //Проверка товаров перед добавлением в корзину
   $result = checkProducts($link,$result,$products, $reqLanguage);//reuslt['products'],reuslt['productsChecked'] & result['messages']?
   if ($result['error']){goto endRequest;}
@@ -59,7 +64,8 @@ if ($method === 'OPTIONS') {
   unset($result['productsChecked'],$result['products']);
   if (count($products)<1){$result['error']=true;$result['code']=400;$result['message']=$errors['productsNotFound']; goto endRequest;}
 
-  $result = updateUserCart($link,$result,$userId,$productsChecked, time(),NULL);
+  $result=createUserCart($link, $result, $userId,$productsChecked);
+  //$result = updateUserCart($link,$result,$userId,$productsChecked, time(),NULL);
   if ($result['error']){goto endRequest;}
   
   $result = formatUserCart($result, $products, time(),null);

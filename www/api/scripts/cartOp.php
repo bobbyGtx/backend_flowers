@@ -1,6 +1,37 @@
 <?php
-//Создание корзины пользователю
-function createUserCart($link,$result, $userId, $products = NULL){
+
+function checkUserCart($result, $link, $userId){
+  include 'variables.php';
+  $funcName = 'checkUserCart_func';
+
+  if ($result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  settype($userId,"integer");
+  if (!$userId || $userId===0) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+
+  $sql = "SELECT `id`,`items`,`user_id` FROM `carts` WHERE `user_id`=?";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param('i', $userId);
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+
+  if ($numRows === 0){
+    $result['noCart']=true;
+  }else{
+    $result['error']=true; $result['code']=400; $result['message'] = $errors['cartRebaseImpossible']; goto endFunc;
+  }
+ 
+  endFunc:
+  return $result;
+}//Проверка наличия корзины пользователя перед cartRebase
+
+function createUserCart($link, array $result, int $userId,array|null $products = null){
+  //Корзина создается при запросе корзины или при перебазировании
   include 'variables.php';
   $funcName = 'createUserCart'.'_func';
   if ($result['error']){goto endFunc;}
@@ -9,13 +40,13 @@ function createUserCart($link,$result, $userId, $products = NULL){
 
   $createdAt = 'NULL';
   if ($products && is_array($products)){
-    $products = json_encode($products);
+    $productsStr = json_encode($products);
     $createdAt = time();
   }else{
-    $products = 'NULL';
+    $productsStr = 'NULL';
   }
 
-  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', $products, $createdAt, NULL);";
+  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', '$productsStr', $createdAt, NULL);";
   try{
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -25,7 +56,7 @@ function createUserCart($link,$result, $userId, $products = NULL){
   
   endFunc:
   return $result;
-}
+}//Создание корзины пользователю. При первом запросе корзины или при RebaseCart (post)
 
 function checkProduct(mysqli $link, array $result, int $productId, int $quantity, $languageTag=''){
   include 'variables.php';

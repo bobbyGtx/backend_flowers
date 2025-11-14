@@ -82,9 +82,7 @@ if ('OPTIONS' === $method) {
     $result['error']=true; $result['code']=500; $result['message']="Problem with UserID. Creating Cart record in DB impossible. ($emessage))";goto endRequest;
   }
 
-  //Создание записи в таблице корзин
-  $result = createUserCart($link, $result, $newUserId);
-  if ($result['error']) goto endRequest;
+  //Запись в таблице с корзиной создается при первом запросе корзины или при rebaseCart(post)
   
 }else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
