@@ -31,7 +31,7 @@ function checkUserCart($result, $link, $userId){
 }//Проверка наличия корзины пользователя перед cartRebase
 
 function createUserCart($link, array $result, int $userId,array|null $products = null){
-  //Корзина создается при запросе корзины или при перебазировании
+  //Корзина создается при запросе корзины или при перебазировании. По наличию записи корзиныопределяется перебазирование
   include 'variables.php';
   $funcName = 'createUserCart'.'_func';
   if ($result['error']){goto endFunc;}
@@ -93,9 +93,8 @@ function checkProduct(mysqli $link, array $result, int $productId, int $quantity
   }//Товар не доступен
 
   if ((intval($product['count']) - $quantity)<0){
-    $result['error']=true; $result['code']=400;
-    $result['message']=$infoErrors['notEnoughtGoods'] . 'There are ' .$product['count']. " units of this product in stock out of $quantity.";
-    goto endFunc;
+    $result['error']=false;
+    $result['infoMessage']=$infoErrors['notEnoughtGoods'] . ' There are ' .$product['count']. " units of this product in stock out of $quantity.";
   }//Товара не достаточно
   $product['quantity']=$quantity;
   $result['product'] = $product;
@@ -107,14 +106,12 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   //Проверяет наличие продуктов в базе и возвращает готовый массив со всеми данными для вывода пользователю
   include 'variables.php';
   $funcName = 'checkProducts_func';
-  $notFoundMessage = 'Some products were not found in the database and have been removed!';
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if(empty($products) || !is_array($products) || count($products)===0) {
    $result['error']=true; $result['code']=400; $result['message']=$dataErr['notRecognized'] . "($funcName)"; goto endFunc;
   }
-  $messages = [];
   $productIds=[];
   foreach ($products as $product) {$productIds[]=$product["id"];}
 
@@ -136,8 +133,8 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
     $stmt->close();
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
   $numRows = $response->num_rows;
-  if ($numRows==0){$result['error']=true;$result['code']=400;$result['message']=$errors['productsNotFound']; $result['cartAction']='clear'; goto endFunc;}
-  if ($numRows!==count($products)){ $messages["notFound"] = $notFoundMessage; $result['cartAction']='fix';}
+  if ($numRows==0){$result['error']=true;$result['message']=$errors['productsNotFound']; $result['cartAction']='clear'; goto endFunc;}
+  if ($numRows!==count($products)){ $result['infoMessage'] = $infoErrors['someProductsRemoved']; $result['cartAction']='fix';}
 
   $items = $response->fetch_all(MYSQLI_ASSOC);
   $productsChecked=[];
@@ -147,6 +144,7 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
     if ($itemIndex !== false){
       $item["quantity"] = $products[$itemIndex]["quantity"];
       $productsChecked[]=["id"=>$item["id"],"quantity"=>$item["quantity"]];
+      if ($item["quantity"] > $item["count"]) $result['infoMessage'] = $infoErrors['notEnoughtGoods'];
     }else{
       $result['error']=true;$result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)";
     }
@@ -157,7 +155,6 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   $result["productsChecked"]=$productsChecked;
 
   endFunc:
-  if (count(value: $messages)>0) $result["messages"] = array_values($messages);
   return $result;//Возвращаем массив продуктов и колличества имеющихся в базе айдишников + сообщения обработки
 }//Функция проверки массива товаров на наличие в базе перед добавлением в корзину (проверка id)
 
@@ -264,7 +261,6 @@ function getCart($link, $result, $userId){
     $result = createUserCart($link,$result,$userId,null);
     $result['userCart'] = ["items"=>[],"createdAt"=> 0,"updatedAt"=> 0];goto endFunc;
   }//Создаем запись корзины для пользователя
-  if ($numRows > 1){$result['error']=true; $result['code']=500; $result['message']=$dbError['multipleRecords'] . "($funcName)";}
   $userCart = $response->fetch_assoc();//парсинг
   if (empty($userCart['items'])){$result['userCart'] = ["items"=>[],"createdAt"=> intval($userCart["createdAt"]),"updatedAt"=> intval($userCart["updatedAt"])];goto endFunc;} //Если поле пустое, завершаем
   $userCartItems = json_decode($userCart['items'],true); //true возвращает объект как массив

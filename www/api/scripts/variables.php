@@ -59,7 +59,7 @@ $dbError['recordsNotFound'] = 'Requested Records not found! ';
 $dbError['connectionError'] = 'DB connection Error! ';
 
 $errors['productNotFound'] = 'Product not found! ';//400
-$errors['productsNotFound'] = 'Products not found! ';
+$errors['productsNotFound'] = 'Products not found!';
 $errors['userDataNotFound'] = 'User ID not found! ';
 $errors['dataNotFound'] = 'No data was passed to the function or it was incorrect. ';
 $errors['cartEmpty'] = 'Critical error! User cart empty! ';
@@ -69,21 +69,21 @@ $errors['cartRebaseImpossible'] = 'Cart rebase impossible. User have a cart!';
 $errors['MethodNotAllowed']='Method Not Allowed';
 $errors['dataNotAcceptable'] = 'Data not Acceptable!';
 
-$dataErr['notRecognized'] = 'Request parameters not recognized! ';//Code 400
-$dataErr['dataInFunc'] = 'Error in data passed to the function! ';
-$dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized! ';
+$dataErr['notRecognized'] = 'Request parameters not recognized!';//Code 400
+$dataErr['dataInFunc'] = 'Error in data passed to the function!';
+$dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized!';
 
-$critErr['userDNotFound'] ='Critical error! User data not found in record. ';
-$critErr['userIdNotFound'] ='Critical error! User ID not found in record. ';
+$critErr['userDNotFound'] ='Critical error! User data not found in record.';
+$critErr['userIdNotFound'] ='Critical error! User ID not found in record.';
 
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
-$infoErrors['notEnoughtGoods'] = 'Not enough goods in stock ';
-$infoErrors['productNotAvailable'] = 'The product is currently unavailable!';
+$infoErrors['notEnoughtGoods'] = 'Not enough goods in stock.';
+$infoErrors['productNotAvailable'] = 'Requested product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change! ';
-$infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system. Unrecognized items were found.';
-$infoErrors['someProductsRemoved'] = 'Unrecognized products were found and removed.';
+$infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system.';
+$infoErrors['someProductsRemoved'] = 'Unrecognized products were removed.';
 
 $authError['loginOrPassNC'] ='Login or password not correct!';
 $authError['emailNotFound'] ='E-mail not found in DB!';//401

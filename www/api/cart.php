@@ -5,7 +5,6 @@ header("Access-Control-Allow-Methods: OPTIONS, POST, PATCH, GET, DELETE");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Access-Token, X-Language");
 
-
 $method = $_SERVER['REQUEST_METHOD'];
 include 'scripts/variables.php';
 include 'scripts/languageOp.php';
@@ -102,7 +101,7 @@ if ($method === 'OPTIONS') {
   //Проверка товара перед добавлением в корзину
   $result = checkProduct($link,$result,$postProductId,$postQuantity, $reqLanguage);
   if ($result['error']){goto endRequest;}
-$product = $result['product'];unset($result['product']);
+  $product = $result['product'];unset($result['product']);
 
   //Получение корзины пользователя для объединения новых со старыми товарами
   $result = getCart($link, $result, $userId);
@@ -194,23 +193,21 @@ $product = $result['product'];unset($result['product']);
   $result = checkProducts($link, $result, $products, $reqLanguage);
   if ($result['error']) {
     if (isset($result['cartAction']) && $result['cartAction']==='clear'){
-      $result['error']=false;$result['code']=200; unset($result['messages'],$result['cartAction']);
+      $result['error']=false;$result['code']=200; unset($result['cartAction']);//временно снимаем ошибку
       $result = clearUserCart($link,$result,$userId);
-      $result = formatUserCart($result,[],null,time());
+      $result = formatUserCart($result,[],time(),null);
       $result['error']=true; $result['code']=200;$result['message']=$infoErrors['cartClearedBySystem'];
     }
     goto endRequest;
-  }//Чистим корзину если найдены неизвестные товары и выводим результат с ошибкой
+  }//Чистим корзину если все товары неизвестные и выводим сообщение
   
   if (isset($result['cartAction']) && $result['cartAction'] ==='fix'){
     $productsList = $result["productsChecked"]; unset($result["productsChecked"],$result['cartAction']);
     $checkedProductsList = $result["products"];unset($result["products"]);
-    if (count($productsList)>0 && count($productsList)<count($products)){
-      $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
-      $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
-      $result['error']=true; $result['code']=200;$result['message']=$infoErrors['cartClearedBySystem'];
-      goto endRequest;
-    }//доп проверка проблем в корзине
+    $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
+    $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
+    $result['infoMessage']=$infoErrors['someProductsRemoved'];
+    goto endRequest;
   }//в корзине найдены неопознанные товары. Корзина будет перезаписана только известными
 
   $checkedProductsList = $result["products"];unset($result["products"],$result["productsChecked"]);
