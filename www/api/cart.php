@@ -151,6 +151,16 @@ if ($method === 'OPTIONS') {
 
   $result = checkProducts($link,$result,$userCartItems,$reqLanguage);
   if ($result["error"]){goto endRequest;}
+  //Ошибка с кодом clear тут не возможна. Проверять нужно на cartAction = fix
+  if (isset($result['cartAction']) && $result['cartAction'] ==='fix'){
+    $productsList = $result["productsChecked"]; unset($result["productsChecked"],$result['cartAction']);
+    $checkedProductsList = $result["products"];unset($result["products"]);
+    $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
+    $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
+    //информационное сообщение добавляется в messages[]
+    goto endRequest;
+  }//в корзине найдены неопознанные товары. Корзина будет перезаписана только известными
+
   $products=$result["products"];
   unset($result["products"],$result["productsChecked"]);
 
@@ -202,7 +212,7 @@ if ($method === 'OPTIONS') {
   }//Чистим корзину если все товары неизвестные и выводим сообщение
   
   if (isset($result['cartAction']) && $result['cartAction'] ==='fix'){
-    $productsList = $result["productsChecked"]; unset($result["productsChecked"],$result['cartAction']);
+    $productsList = $result["productsChecked"]; unset($result['cartAction']);
     $checkedProductsList = $result["products"];unset($result["products"]);
     $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
     $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
