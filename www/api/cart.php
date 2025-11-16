@@ -206,7 +206,7 @@ if ($method === 'OPTIONS') {
     $checkedProductsList = $result["products"];unset($result["products"]);
     $result = updateUserCart($link,$result,$userId,$productsList,$createdAt,time());
     $result = formatUserCart($result,$checkedProductsList,$createdAt,time());
-    $result['infoMessage']=$infoErrors['someProductsRemoved'];
+    //информационное сообщение добавляется в messages[]
     goto endRequest;
   }//в корзине найдены неопознанные товары. Корзина будет перезаписана только известными
 

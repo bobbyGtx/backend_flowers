@@ -40,13 +40,13 @@ function createUserCart($link, array $result, int $userId,array|null $products =
 
   $createdAt = 'NULL';
   if ($products && is_array($products)){
-    $productsStr = json_encode($products);
+    $productsStr = "'".json_encode($products)."'";
     $createdAt = time();
   }else{
     $productsStr = 'NULL';
   }
 
-  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', '$productsStr', $createdAt, NULL);";
+  $sql = "INSERT INTO `carts` (`id`, `user_id`, `items`, `createdAt`, `updatedAt`) VALUES (NULL, '$userId', $productsStr, $createdAt, NULL);";
   try{
   $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -61,6 +61,7 @@ function createUserCart($link, array $result, int $userId,array|null $products =
 function checkProduct(mysqli $link, array $result, int $productId, int $quantity, $languageTag=''){
   include 'variables.php';
   $funcName = 'checkProduct_func';
+  $messages=[];
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId){$result['error']=true; $result['code']=500; $result['message']=$errors['productIdNotFound'] . "($funcName)";}
@@ -93,12 +94,12 @@ function checkProduct(mysqli $link, array $result, int $productId, int $quantity
   }//Товар не доступен
 
   if ((intval($product['count']) - $quantity)<0){
-    $result['error']=false;
-    $result['infoMessage']=$infoErrors['notEnoughtGoods'] . ' There are ' .$product['count']. " units of this product in stock out of $quantity.";
-  }//Товара не достаточно
+    $messages[]=$infoErrors['notEnoughtGoods'] . ' There are ' .$product['count']. " units of this product in stock out of $quantity.";
+  }//Предупреждение: Товара не достаточно
   $product['quantity']=$quantity;
   $result['product'] = $product;
   endFunc:
+  if (count($messages)>0) $result['messages'] = array_values($mesages);
   return $result;
 }//Проверка наличия товаров в базе и достаточности на складе
 
@@ -106,6 +107,7 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   //Проверяет наличие продуктов в базе и возвращает готовый массив со всеми данными для вывода пользователю
   include 'variables.php';
   $funcName = 'checkProducts_func';
+  $messages=[];
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
@@ -134,7 +136,7 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
   $numRows = $response->num_rows;
   if ($numRows==0){$result['error']=true;$result['message']=$errors['productsNotFound']; $result['cartAction']='clear'; goto endFunc;}
-  if ($numRows!==count($products)){ $result['infoMessage'] = $infoErrors['someProductsRemoved']; $result['cartAction']='fix';}
+  if ($numRows!==count($products)){$messages[] = $infoErrors['someProductsRemoved']; $result['cartAction']='fix';}
 
   $items = $response->fetch_all(MYSQLI_ASSOC);
   $productsChecked=[];
@@ -144,7 +146,8 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
     if ($itemIndex !== false){
       $item["quantity"] = $products[$itemIndex]["quantity"];
       $productsChecked[]=["id"=>$item["id"],"quantity"=>$item["quantity"]];
-      if ($item["quantity"] > $item["count"]) $result['infoMessage'] = $infoErrors['notEnoughtGoods'];
+      if ($item["quantity"] > $item["count"]) $messages['notEnoughtGoods'] = $infoErrors['notEnoughtGoods'];
+      if ($item['disabled'])$messages['notAvailable'] = $infoErrors['productNotAvailable'];
     }else{
       $result['error']=true;$result['code']=500;$result['message']=$dbError['unexpResponse'] . "($funcName)";
     }
@@ -155,6 +158,7 @@ function checkProducts(mysqli $link, array $result,array $products,$languageTag=
   $result["productsChecked"]=$productsChecked;
 
   endFunc:
+  if (count($messages)>0) $result['messages']=array_values($messages);
   return $result;//Возвращаем массив продуктов и колличества имеющихся в базе айдишников + сообщения обработки
 }//Функция проверки массива товаров на наличие в базе перед добавлением в корзину (проверка id)
 
