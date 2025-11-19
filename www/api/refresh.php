@@ -4,7 +4,7 @@ header("Access-Control-Allow-Origin: http://localhost:4200");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: OPTIONS, POST");
 header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Access-Token, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Access-Token, X-Language, X-Requested-With");
 
 $method = $_SERVER['REQUEST_METHOD'];
 include 'scripts/variables.php';
@@ -33,9 +33,7 @@ if ($method === 'OPTIONS') {
   
   $result = generateTokens($link, $result, $userId);
   if ($result['error']) goto endRequest;
-  $tokens = $result['tokens'];//В результате есть ответ с новыми токенами + userId
-  
-  //$result['tokens'] = ['accessToken' => $newAccessToken, 'refreshToken' => $newRefreshToken, 'userId' => $userId];
+  //$result['user'] = ['userId' => $userId, 'accessToken' => $newAccessToken, 'refreshToken' => $newRefreshToken];
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];

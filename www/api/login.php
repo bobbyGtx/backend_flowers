@@ -3,7 +3,7 @@ header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: OPTIONS, POST");
 header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
 include 'scripts/variables.php';//файл с генераторами строк
@@ -34,13 +34,9 @@ if ('OPTIONS' === $method) {
   $result = login($link, $result, $loginPost, $passwordPost);
   if ($result['error']) goto endRequest;
   
-  $userId = $result['user']['userId'];
-
-  $result = generateTokens($link, $result, $userId);
+  $userId = $result['user']['userId']; unset($result['user']);
+  $result = generateTokens($link, $result, $userId);//$result['user'] = ['userId' => $userId, 'accessToken' => $accessToken, 'refreshToken' => $refreshToken];
   if ($result['error']) goto endRequest;
-  $tokens = $result['tokens'];unset($result['tokens']);
-
-  $result['user'] +=$tokens;
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];

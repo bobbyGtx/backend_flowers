@@ -3,7 +3,7 @@
 function languageDetection($reqHeaders){
   include 'variables.php';
   $defaultLanguage= 'ru';
-  if (empty($reqHeaders) || !isset($language['x-language'])) return '';
+  if (!isset($reqHeaders['x-language'])) return '';
   $headers = array_change_key_case($reqHeaders, CASE_LOWER);
 
   $lng = strtolower($headers['x-language']);

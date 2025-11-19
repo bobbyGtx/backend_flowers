@@ -42,20 +42,24 @@ function generateFavList($link, $result, $favoriteList, $languageTag = ''){
   $productIDs = array_map('intval', $favoriteList);//Приводим всё к числам
   $idList = implode(',', $productIDs);// Делаем строку вида "1,2,3,4,5"
 
-  $sql = "SELECT `id`,`name$languageTag` as `name`, `price`, `image`, `url`, `count`, `disabled` FROM `products` WHERE `id` IN ($idList);";
-  try{
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected']."($funcName)($emessage))";
-    goto endFunc;
-  }
 
-  if (mysqli_num_rows($sqlResult)===0){
+  $sql = "SELECT `id`,`name$languageTag` as `name`, `price`, `image`, `url`, `count`, `disabled` FROM `products` WHERE `id` IN ($idList);";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
+  } catch (Exception $e) {
+    $emessage = $e->getMessage();$result['error'] = true;
+    $result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+
+  if ($numRows===0){
     $result['error']=true; $result['code']=500; $result['message']=$errors['productsNotFound']; $result['favorites'] = [];goto endFunc;
   }// Если мы делали запрос, то избранное должно быть.
 
-  $productsList = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//парсинг строк
+  $productsList = $response->fetch_all(MYSQLI_ASSOC);
   foreach($productsList as &$item){
     $item['ends'] = intval($item['count'])<$endsCount?true:false;
   }//Установка отметки о том, что товар заканчивается
@@ -97,7 +101,6 @@ function delFromFavorite($link, $result, $userId, $productId){
   settype($userId, 'integer');settype($productId, 'integer');
   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
   if (!$productId) {$result['error']=true; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
-
 
   $sql = "DELETE FROM `favorites` WHERE `user_id` = $userId AND `product_id` = $productId ;";
   try{

@@ -3,7 +3,7 @@ header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: OPTIONS, POST, GET, DELETE");
 header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Access-Token, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
 include 'scripts/languageOp.php';
@@ -69,7 +69,7 @@ if ($method === 'OPTIONS') {
   
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
-
+  $result['headers']=$reqLanguage;
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {
     goto endRequest;//Если пришла ошибка - завршаем скрипт
@@ -111,16 +111,13 @@ if ($method === 'OPTIONS') {
 
   $result = checkToken($link, $result, getallheaders(),true);
 
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-    }
+  if ($result['error']) goto endRequest;
+  if ($result['userId'] && $result['userPassword']){
+    $userId = $result['userId'];
+    $userPwd = $result['userPassword'];
+    unset($result['userId']); unset($result['userPassword']);
+  }else{
+    $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
   }
 
   $result = delFromFavorite($link, $result, $userId, $delProductId);

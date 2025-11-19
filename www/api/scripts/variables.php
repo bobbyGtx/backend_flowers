@@ -96,4 +96,4 @@ $authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
-$infoMessages['userBlocked'] = 'User blocked!';
+$infoMessages['userBlocked'] = 'User blocked!';//403

@@ -5,11 +5,12 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    $funcName = 'checkToken'.'_func';
    $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
    $http_AccessToken = isset($http_Headers[$accessTokenHeader])?$http_Headers[$accessTokenHeader]:null;
+   $result['token'] = $http_AccessToken;
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
       $result['error'] = true;$result['code'] = 401;$result['message'] = 'Authorisation error.'; return $result;
       //$result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
    }
-
+   
    $sql = "SELECT `id`, `password`,`$accTokenField`,`$accTokenLifeField` FROM `$userTableName` WHERE `$accTokenField` = '" . $http_AccessToken . "'";
    $sqlSelRecord = mysqli_query($link, $sql);//выполняем запрос
    if (empty($sqlSelRecord)) {
@@ -64,7 +65,7 @@ function generateTokens($link, $result, $userId){
       $result['error']=true; $result['code']=500; $result['message']=$errors['updReqRejected'] . "($funcName)($emessage))";goto endFunc;
    }
 
-   $result['tokens'] = ['accessToken' => $accessToken, 'refreshToken' => $refreshToken, 'userId' => $userId];
+   $result['user'] = ['userId' => $userId, 'accessToken' => $accessToken, 'refreshToken' => $refreshToken];
 
    endFunc:
    return $result;
@@ -79,7 +80,7 @@ function checkRefreshToken($link, $result, $refreshToken){
     $result['error']=true; $result['code'] = 401; $result['message'] = $dataErr['notRecognized'];goto endFunc;
    }
 
-   $sql = "SELECT `id`,`$refreshTokenField`,`$refrTokenLifeField` FROM `$userTableName` WHERE `$refreshTokenField` = '" . $refreshToken . "'";
+   $sql = "SELECT `id`,`$refreshTokenField`,`$refrTokenLifeField`, `blocked` FROM `$userTableName` WHERE `$refreshTokenField` = '" . $refreshToken . "'";
    try{
       $sqlSelRecord = mysqli_query($link, $sql);//выполняем запрос
    } catch (Exception $e){
@@ -98,6 +99,9 @@ function checkRefreshToken($link, $result, $refreshToken){
    $refrTokenTime = $record[$refrTokenLifeField];
    if (empty($userId) || empty($refreshToken)) {
     $result['error']=true; $result['code'] = 500; $result['message'] = $errors['recognizeUnableDB']."($funcName)";goto endFunc;
+   }
+   if ($record['blocked']){
+      $result['error']=true; $result['code'] = 403; $result['message'] = $infoMessages['userBlocked'];goto endFunc;
    }
    if ((time() - $refrTokenTime) > 0) {
     $result = clearTokens($link, $result, $userId);
