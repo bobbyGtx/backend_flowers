@@ -66,4 +66,4 @@ if ($method === 'OPTIONS') {
 endRequest:
 if ($link) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);

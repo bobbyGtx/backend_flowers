@@ -6,7 +6,7 @@ function getUserFavorites($link, $result, $userId){
 
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "SELECT `product_id` FROM `favorites` WHERE `user_id` = $userId";
   try{
@@ -76,8 +76,8 @@ function addToFavorite($link, $result, $userId, $productId){
   //вывод списка в переменной $result['favorites']
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
-  if (!$productId) {$result['error']=true; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "INSERT IGNORE INTO `favorites`(`user_id`, `product_id`, `addDate`) VALUES ($userId, $productId,".time().");";
   try{
@@ -99,8 +99,8 @@ function delFromFavorite($link, $result, $userId, $productId){
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   settype($userId, 'integer');settype($productId, 'integer');
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
-  if (!$productId) {$result['error']=true; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "DELETE FROM `favorites` WHERE `user_id` = $userId AND `product_id` = $productId ;";
   try{

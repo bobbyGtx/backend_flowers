@@ -5,9 +5,8 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    $funcName = 'checkToken'.'_func';
    $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
    $http_AccessToken = isset($http_Headers[$accessTokenHeader])?$http_Headers[$accessTokenHeader]:null;
-   $result['token'] = $http_AccessToken;
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
-      $result['error'] = true;$result['code'] = 401;$result['message'] = 'Authorisation error.'; return $result;
+      $result['error'] = true;$result['code'] = 401;$result['message'] = $authError['accTokenNotFound']; return $result;
       //$result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
    }
    
@@ -17,7 +16,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
       $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['reqRejected'] . "($funcName)";return $result;
    }//Проверяем запрос в БД на успешность
    if (mysqli_num_rows($sqlSelRecord) < 1) {
-      $result['error'] = true;$result['code'] = 401;$result['message'] = 'Token invalid!';
+      $result['error'] = true;$result['code'] = 401;$result['message'] = $authError['accTokenInvalid'];
       return $result;
    }//Если записей нет - то такой токен не найден в базе. Разделение нужно для след. проверки
    $record = mysqli_fetch_array($sqlSelRecord);//парсинг
@@ -30,7 +29,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    }
    if (($accTokenTime - time()) < 0) {
       //Еесли токен просрочен выходим
-      $result['error'] = true;$result['code'] = 401;$result['message'] = 'Token invalid!'; return $result;
+      $result['error'] = true;$result['code'] = 401;$result['message'] = $authError['accTokenOutOfDate']; return $result;
    }
    if ($userData){
       $result['userId'] = $userId; $result['userPassword'] = $userPwd;   
@@ -77,7 +76,7 @@ function checkRefreshToken($link, $result, $refreshToken){
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
    if (empty($refreshToken) || !preg_match($refreshTokenRegEx, $refreshToken)) {
-    $result['error']=true; $result['code'] = 401; $result['message'] = $dataErr['notRecognized'];goto endFunc;
+    $result['error']=true; $result['code'] = 401; $result['message'] = $authError['refrTokenNotFound'];goto endFunc;
    }
 
    $sql = "SELECT `id`,`$refreshTokenField`,`$refrTokenLifeField`, `blocked` FROM `$userTableName` WHERE `$refreshTokenField` = '" . $refreshToken . "'";
@@ -112,7 +111,7 @@ function checkRefreshToken($link, $result, $refreshToken){
    if (!empty($userId) && intval($userId) > 0) {
       $result['userId'] = $userId;
    }else{
-      $result['error']=true; $result['code'] = 401; $result['message'] = $errors['outputtingFuncError']."($funcName)";goto endFunc;
+      $result['error']=true; $result['code'] = 501; $result['message'] = $errors['outputtingFuncError']."($funcName)";goto endFunc;
    }
 
 

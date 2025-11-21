@@ -7,7 +7,7 @@ function checkUserCart($result, $link, $userId){
   if ($result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   settype($userId,"integer");
-  if (!$userId || $userId===0) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId || $userId===0) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql = "SELECT `id`,`items`,`user_id` FROM `carts` WHERE `user_id`=?";
   try {
@@ -36,7 +36,7 @@ function createUserCart($link, array $result, int $userId,array|null $products =
   $funcName = 'createUserCart'.'_func';
   if ($result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $createdAt = 'NULL';
   if ($products && is_array($products)){
@@ -193,7 +193,7 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updated
   $funcName = 'updateUserCart_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   //- Filtered - обозначает чистку корзины от не найденных в БД артиклей 
   
@@ -248,9 +248,9 @@ function getCart($link, $result, $userId){
   $funcName = 'getCart_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
   settype($userId,"integer");
-  if (empty($userId) ||$userId<1){$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (empty($userId) ||$userId<1){$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
 
   $sql= "SELECT `id`,`user_id`,`items`,`createdAt`,`updatedAt` FROM `carts` WHERE `user_id` = $userId;";
   try {
@@ -283,7 +283,7 @@ function clearUserCart($link, $result, $userId){
   $funcName = 'clearUserCart'.'_func';
   if (empty($result) || $result['error']){goto endFunc;}
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-  if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+  if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
   
   $updatedAt=time();//Добавление временой метки
   $sql = "UPDATE `carts` SET `items`=NULL,`updatedAt`= $updatedAt ,`createdAt`= NULL WHERE `user_id` = $userId;";

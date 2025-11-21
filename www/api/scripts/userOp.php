@@ -9,18 +9,18 @@ function checkEmail($link,$result,$email,$checkRegex=true)
       $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . "($funcName)"; goto endFunc;
    }
    if (empty($email)) {
-      $result['error']=true; $result['code'] = 400; $result['message'] = 'Email parameter not found! ' . "($funcName)"; goto endFunc;
+      $result['error']=true; $result['code'] = 500; $result['message'] = $errors['emailNotRecognized']; goto endFunc;
    }
 
    if ($checkRegex && !preg_match($emailRegEx, $email)){
-      $result['funcError']=true; $result['message'] ='EMail not acceptable!' . "($funcName)"; goto endFunc;
+      $result['funcError']=true; $result['code'] = 400; $result['message'] =$authError['emailNotValid']; goto endFunc;
    }
 
    $sql = "SELECT `id` FROM users WHERE email = '" . $email . "'";
    $sqlResult = mysqli_query($link, $sql);
    $numRows = mysqli_num_rows($sqlResult);
    if ($numRows <> 0) {
-      $result['error']=true; $result['code'] = 400; $result['message'] = 'User with this email is already registered!'; unset($result['funcError']); goto endFunc;
+      $result['error']=true; $result['code'] = 400; $result['message'] = $errors['emailIsBusy']; unset($result['funcError']); goto endFunc;
    }
    endFunc:
    return $result;
@@ -31,7 +31,7 @@ function getUserInfo($link, $result, $userId, $languageTag = ''){
 
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+   if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
    
    $sql= "SELECT users.id, users.firstName, users.lastName, users.email, users.phone, users.deliveryInfo, users.emailVerification, delivery_types.deliveryType$languageTag as deliveryType, payment_types.paymentType$languageTag as paymentType
    FROM users 
@@ -71,7 +71,7 @@ function login($link, $result, $login, $pass){
 
    //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД. Если нет - возвращаем ошибку!
     if (!preg_match($emailRegEx, $login)) {
-      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotCorrect']; goto endFunc;
+      $result['error']=true; $result['code'] = 401; $result['message'] = $authError['emailNotValid']; goto endFunc;
     } 
     if (!preg_match($passwordRegEx, $pass)) {
       $result['error']=true; $result['code'] = 401; $result['message'] = $authError['wrongPassword']; goto endFunc;
@@ -120,11 +120,11 @@ function updateUserData($link, $result, $userId, $newData){
 
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
-   if (!$userId) {$result['error']=true; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
+   if (!$userId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
    if (empty($newData) || !is_array($newData)){$result['error']=true; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;}
 
    if (count($newData)<1){
-      $result['code'] = 400;$result['message'] = $infoErrors['nothingToChange'] . "($funcName)"; goto endFunc;//error 406: nothing to change
+     $result['error']=true; $result['message'] = $infoErrors['nothingToChange']; goto endFunc;
    }//Выходим если нет данных для добавления
 
    $newData['updatedAt']=time();//Добавление временой метки
@@ -292,7 +292,7 @@ function prepareNewData($result, $postDataJson){
    }//проверка типа оплаты
 
    if (count($messages)>0) {
-      $result['code'] = 406;$result['message'] = $errors['dataNotAcceptable'] . "($reqName)"; $result['messages'] = $messages; goto endFunc;//error 406: unacceptable format
+      $result['code'] = 406;$result['message'] = $errors['dataNotAcceptable']; $result['messages'] = $messages; goto endFunc;//error 406: unacceptable format
    }//Если есть ошибки данных - выводим их
 
    $result['newData'] = $newData;

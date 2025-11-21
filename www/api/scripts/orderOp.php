@@ -271,15 +271,10 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
     goto endFunc;
   }
   if (!$link) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";
-    goto endFunc;
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;
   }
   if (!$orderId || intval($orderId) < 1) {
-    $result['error'] = true;
-    $result['message'] = $errors['userIdNotFound'] . "($funcName)";
-    goto endFunc;
+    $result['error'] = true;$result['code']=500;$result['message'] = $errors['orderIdNotFound'] . "($funcName)";goto endFunc;
   }
   settype($userId, 'integer');
 
@@ -540,7 +535,7 @@ function getOrders($link, $result, $userId, $reqLanguage)
   $funcName = 'getOrders_func';
   if (empty($result) || $result['error']) {goto endFunc;}
   if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
-  if (!$userId) {$result['error'] = true;$result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
+  if (!$userId) {$result['error'] = true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
 
   $sql = "SELECT 
     o.id,

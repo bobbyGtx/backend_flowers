@@ -17,7 +17,7 @@ if ($method === 'OPTIONS') {
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/favoritesOp.php';
   include 'scripts/productsOp.php';
-  $result = ['error' => false, 'code' => 200, 'message' => 'Addet to favorites'];//Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => 'Added to favorites!'];//Создание массива с ответом Ок
 
   //{"productId": "638672d5257c18cd625190ea"}
   //Обработка входных данных
@@ -69,7 +69,6 @@ if ($method === 'OPTIONS') {
   
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
-  $result['headers']=$reqLanguage;
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {
     goto endRequest;//Если пришла ошибка - завршаем скрипт
@@ -128,4 +127,4 @@ if ($method === 'OPTIONS') {
 endRequest:
 if ($link) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);

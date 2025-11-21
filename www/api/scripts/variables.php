@@ -67,7 +67,7 @@ $errors['unexpectedFuncResult'] = 'Unexpected result from function! ';
 $errors['cartRebaseImpossible'] = 'Cart rebase impossible. User have a cart!';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
-$errors['dataNotAcceptable'] = 'Data not Acceptable!';
+$errors['dataNotAcceptable'] = 'Data not acceptable!';
 
 $dataErr['notRecognized'] = 'Request parameters not recognized!';//Code 400
 $dataErr['dataInFunc'] = 'Error in data passed to the function!';
@@ -81,17 +81,24 @@ $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
 $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock.';
 $infoErrors['productNotAvailable'] = 'Requested product is currently unavailable!';
-$infoErrors['nothingToChange'] = 'Nothing to change! ';
+$infoErrors['nothingToChange'] = 'Nothing to change!';
 $infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system.';
 $infoErrors['someProductsRemoved'] = 'Unrecognized products were removed.';
+
+$errors['emailIsBusy'] = 'EMail is busy!';//400
+$errors['emailNotRecognized'] = 'E-Mail not recognized!';//500
 
 $authError['loginOrPassNC'] ='Login or password not correct!';
 $authError['emailNotFound'] ='E-mail not found in DB!';//401
 $authError['wrongPassword'] ='Password wrong!';//401
-$authError['emailNotCorrect'] ='Email not correct!';//401
+$authError['emailNotValid'] ='Email not valid!';//401, 400
 $authError['passwortNotCorrect'] ='Password not acceptable!';//401
-$authError['refrTokenInvalid'] = 'Refresh token invalid! ';
-$authError['refrTokenOutOfDate'] = 'Refresh token invalid! ';
+$authError['refrTokenInvalid'] = 'Refresh token invalid!';//401
+$authError['refrTokenOutOfDate'] = 'Refresh token out of date!';//401
+$authError['accTokenNotFound'] = 'Access token not found or has not valid format!';//401
+$authError['refrTokenNotFound'] = 'Refresh token not found or has not valid format!';//401
+$authError['accTokenInvalid'] = 'Access token invalid!';//401
+$authError['accTokenOutOfDate'] = 'Access token out of date!';//401
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
