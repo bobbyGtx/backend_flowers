@@ -9,7 +9,7 @@ $refreshTokenField = 'refreshToken';//название поля
 $refrTokenLifeField = 'refrTokenEndTime';//название поля
 $accTokenLenght = 100;
 $refrTokenLenght = 120;
-$accTokenLife = 100000;
+$accTokenLife = 11120;
 $refrTokenLife = 2629743;
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
@@ -103,4 +103,5 @@ $authError['accTokenOutOfDate'] = 'Access token out of date!';//401
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
+$infoMessages['recordDeleted'] = 'Record deleted!';
 $infoMessages['userBlocked'] = 'User blocked!';//403

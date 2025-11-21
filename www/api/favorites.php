@@ -70,17 +70,10 @@ if ($method === 'OPTIONS') {
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userIdNotFound']."($reqName)"; goto endRequest;
-    }
-  }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']);}
+
+  
 
   //составляем список избранного для пользователя
   $result = getUserFavorites($link,$result, $userId);
@@ -96,17 +89,17 @@ if ($method === 'OPTIONS') {
   include 'scripts/tokensOp.php';//Проверка токена
   include 'scripts/favoritesOp.php';
   //{"productId": "12"}
-  $result = ['error' => false, 'code' => 200, 'message' => 'Record deleted'];//Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['recordDeleted']];//Создание массива с ответом Ок
 
   //Обработка входных данных
   $delData = file_get_contents('php://input');//получение запроса
   $delDataJson = json_decode($delData, true);//парсинг параметров запроса
   settype($delDataJson['productId'], 'integer');//защита от инъекции
   $delProductId = $delDataJson['productId'];
-  if ($delProductId<1){$result['error']=true; $result['code'] = 400; $result['message'] = 'Request parameters (productId) not recognized!'; goto endRequest;}
+  if ($delProductId<1){$result['error']=true; $result['code'] = 400; $result['message'] = $dataErr['notRecognized'].' (productId)'; goto endRequest;}
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
-  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;}
 
   $result = checkToken($link, $result, getallheaders(),true);
 
@@ -116,7 +109,7 @@ if ($method === 'OPTIONS') {
     $userPwd = $result['userPassword'];
     unset($result['userId']); unset($result['userPassword']);
   }else{
-    $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userDNotFound']; goto endRequest;
   }
 
   $result = delFromFavorite($link, $result, $userId, $delProductId);

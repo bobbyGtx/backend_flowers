@@ -51,7 +51,7 @@ if ('OPTIONS' === $method) {
     if ($passwordPost <> $passwordRepeatPost) {
       $result['error']=true; $messages[] ="Passwords don't match";
     } //проверка идентичности паролей
-    if ($passwordPost <> $passwordRepeatPost) {
+    if (!boolval($agree)) {
       $result['error']=true; $messages[] ="Agreements not accepted";
     } //проверка принятия условий
     if ($result['error']==true) {
