@@ -73,8 +73,6 @@ if ($method === 'OPTIONS') {
   if ($result['error']) {goto endRequest;}
   if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']);}
 
-  
-
   //составляем список избранного для пользователя
   $result = getUserFavorites($link,$result, $userId);
   if ($result['error']) goto endRequest;

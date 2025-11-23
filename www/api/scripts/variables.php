@@ -9,7 +9,7 @@ $refreshTokenField = 'refreshToken';//название поля
 $refrTokenLifeField = 'refrTokenEndTime';//название поля
 $accTokenLenght = 100;
 $refrTokenLenght = 120;
-$accTokenLife = 11120;
+$accTokenLife = 600000;
 $refrTokenLife = 2629743;
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
@@ -57,6 +57,7 @@ $dbError['recordNotFound'] = 'Requested Record not found! ';
 $dbError['multipleRecords'] = 'Multiple records were found in the database! ';
 $dbError['recordsNotFound'] = 'Requested Records not found! ';
 $dbError['connectionError'] = 'DB connection Error! ';
+$dbError['deliveryTypesNF'] = 'Delivery types not found in DB!';
 
 $errors['productNotFound'] = 'Product not found! ';//400
 $errors['productsNotFound'] = 'Products not found!';

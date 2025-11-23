@@ -175,14 +175,20 @@ function formatUserCart(array $result, array $products, $createdAt, $updatedAt):
 
   $items=[];
   $totalCount=0;
+  $totalAmount = 0;
   foreach ($products as $product) {
-    $item['quantity'] = $product['quantity'];
-    $totalCount+=$product['quantity'];
+    if ($product['disabled']===0){
+      $item['quantity'] = $product['quantity'];
+      $totalCount+=$product['quantity'];
+      $totalAmount+=$product['quantity']*$product['price'];
+    }else{
+      $item['quantity']=0;
+    }
     unset($product['quantity']);
     $item['product'] = $product;
     $items[]=$item;
   }
-  $result['cart']=["count"=>$totalCount,"createdAt"=>intval($createdAt),"updatedAt"=>intval($updatedAt), "items"=>$items];
+  $result['cart']=["count"=>$totalCount,"amount"=>$totalAmount,"createdAt"=>intval($createdAt),"updatedAt"=>intval($updatedAt), "items"=>$items];
   endFunc:
 
   return $result;
