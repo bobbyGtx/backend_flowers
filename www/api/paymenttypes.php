@@ -24,15 +24,11 @@ if ($method === 'OPTIONS') {
     $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . "($reqName)" . $db_connect_response['message']; goto endRequest;
   }
 
-  $sql= "SELECT 
+  $sql = "SELECT 
   id,
-  deliveryType$reqLanguage as deliveryType,
-  addressNeed,
-  delivery_price,
-  low_price,
-  lPMinPrice,
-  disabled 
-  FROM delivery_types;";
+  paymentType$reqLanguage as paymentType,
+  `disabled`
+  FROM `payment_types`";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -43,10 +39,10 @@ if ($method === 'OPTIONS') {
   } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($emessage))";goto endRequest;}
   
   if ($numRows===0){
-     $result['error']=true;$result['code']=500;$result['message']=$dbError['deliveryTypesNF'];goto endRequest;
+     $result['error']=true;$result['code']=500;$result['message']=$dbError['paymentTypesNF'];goto endRequest;
   }
   
-  $result['deliveryTypes'] = $response->fetch_all(MYSQLI_ASSOC);
+  $result['paymentTypes'] = $response->fetch_all(MYSQLI_ASSOC);
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }

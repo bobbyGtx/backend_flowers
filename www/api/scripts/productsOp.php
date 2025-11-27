@@ -159,10 +159,8 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   }//Обработка параметров запроса
 
    
-  if (!empty($page)||!is_null($page) || $page >0 ) $offset = ($page-1)*$productsPerPage; 
-  else{
-    $offset=0;$page=1;
-  } 
+  if (isset($page) && (!empty($page) || $page >0 )) $offset = ($page-1)*$productsPerPage; 
+  else {$offset=0;$page=1;} 
   
   $baseSQL = "SELECT 
   p.id,

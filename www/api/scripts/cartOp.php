@@ -211,7 +211,7 @@ function updateUserCart($link, $result, $userId, $itemList, $createdAt, $updated
     $createdAt = 'NULL';
     $updatedAt = time();
   }else{
-    $itemListSQL = NULL;
+    $itemListSQL = 'NULL';
   }
   if ($createdAt===0 && $updatedAt===0) $createdAt = time();
   if (empty($createdAt) || is_null($createdAt)){

@@ -1,6 +1,6 @@
 <?php
 
-function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
+function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = ''){
   include 'variables.php';
   $funcName = 'cartToOrder_func';
 
@@ -18,9 +18,9 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
   $j = 0;
   $quantities = [];
   foreach ($userCartItems as $value) {
-    $itemID = $value['productId'];
+    $itemID = $value['id'];
     settype($itemID, 'integer');
-    if (preg_match('/^[0-9]+$/', $itemID)) {
+    if ($itemID > 0) {
       if ($j === 0) {
         $sqlStr = "`id`= $itemID";
       } else {
@@ -31,14 +31,21 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
     }
   }
 
-  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`count`,`disabled` FROM `products` WHERE $sqlStr;";
+  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`count`,`image`,`url`,`disabled` FROM `products` WHERE $sqlStr;";
+  //$result['sql']=$sql;
+
   try {
-    $sqlResult = mysqli_query($link, $sql);
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
   } catch (Exception $e) {
     $emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
   }
 
-  if (mysqli_num_rows($sqlResult) === 0) {
+  if ($numRows === 0) {
     if ($result['error']) {
       goto endFunc;
     } else {
@@ -54,9 +61,9 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
       $result['itemsInCart'] = 0;
       goto endFunc;
     }
-  }//Если товары из карзины не найдены в БД, чистим карзину
+  }//Если товары из корзины не найдены в БД, чистим карзину
 
-  $rows = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//парсинг 
+  $rows = $response->fetch_all(MYSQLI_ASSOC);//парсинг 
 
   if (count($rows) <> count($userCartItems)) {
     $priorityMsg = 'Some [' . count($userCartItems) - count($rows) . '] products were not found in the database and were removed from the cart.';
@@ -68,7 +75,7 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
     unset($newProducts);
   }
   $products = [];
-  $totalPrice = 0; //$quantities - quantities
+  $productsPrice = 0; //$quantities - quantities
   $messages = [];
   $updatesProducts = [];//Массив для изменения остатка заказанных товаров в БД
 
@@ -78,27 +85,22 @@ function cartToOrder($link, $result, $userCartItems, $languageTag = ''){
     $quantityInStock = intval($product['count']);//доступно на складе
     if (($quantityInStock - $quantity) < 0) {
       $result['error'] = true;
-      $messages[] = "Not enough product (" . $product['name' . $language[$lng]] . ") in stock.";
+      $messages[] = "Not enough product (" . $product['name'] . ") in stock.";
     }
     if ($product['disabled']) {
       $result['error'] = true;
-      $messages[] = "Product (" . $product['name' . $language['en']] . ") in the cart is not available.";
+      $messages[] = "Product (" . $product['name'] . ") in the cart is not available.";
     }
     $updatesProducts[intval($product['id'])] = ($quantityInStock - $quantity);//подготавливаем массив для изменения кол-ва товара на складе и возвращаем его
     $totalProductPrice = $quantity * intval($product['price']);
-    $totalPrice += $totalProductPrice;
-    $item = ['id' => $product['id'], 'name' => $product['name' . $language[$lng]], 'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
+    $productsPrice += $totalProductPrice;
+    $item = ['id' => $product['id'], 'name' => $product['name'], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
     $products[] = $item;
-    $counter += $quantities[$product['id']];
   }
 
   if ($result['error'] && count($messages) > 0) {
-    $result['code'] = 406;
-    $result['message'] = $infoErrors['notEnoughtGoods'];
-    $result['messages'] = $messages;
-    goto endFunc;
-  }//Если найдены нестыковки по кол-ву товаров - выходим
-  $result['products'] = $products;
+    $result['code'] = 406;$result['message'] = $infoErrors['notEnoughtGoods'];$result['messages'] = $messages;goto endFunc;}//Если найдены нестыковки по кол-ву товаров - выходим
+  $result['productsData'] = ["products"=>$products, "productsPrice"=>$productsPrice];
   $result['updatesProducts'] = $updatesProducts;
   if (!empty($priorityMsg)) {
     $result['message'] = $priorityMsg;
@@ -176,10 +178,11 @@ WHERE id IN ($idsSql);
   return $result;
 }//Обновление кол-ва продуктов в магазине исходя из заказа клиента
 
-function compileOrderData($incOrder, $selectedDelivery, $address, $products, $userId){
+function compileOrderData($incOrder, $selectedDelivery, $address, $productsData, $userId){
   include 'scripts/variables.php';
+
   $order = [];
-  $deliveryCost = intval($selectedDelivery['lPMinPrice']) <= intval($products['productsPrice']) ? intval($selectedDelivery['low_price']) : intval($selectedDelivery['delivery_price']);
+  $deliveryCost = intval($selectedDelivery['lPMinPrice']) <= $productsData['productsPrice'] ? intval($selectedDelivery['low_price']) : intval($selectedDelivery['delivery_price']);
   $order['deliveryCost'] = $deliveryCost;
   $order['deliveryType_id'] = $incOrder['deliveryTypeId'];
   $order['delivery_info'] = $address;// Адрес доставки. Для БД нужно кодировать json_encode($address,JSON_UNESCAPED_UNICODE)
@@ -190,9 +193,9 @@ function compileOrderData($incOrder, $selectedDelivery, $address, $products, $us
   $order['email'] = $incOrder['email'];
   $order['comment'] = $incOrder['comment'];
   $order['status_id'] = $startOrderStatus;
-  $order['items'] = $products;//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
+  $order['items'] = $productsData['products'];//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
   $order['user_id'] = intval($userId);
-  $order['totalAmount'] = $deliveryCost + intval($products['productsPrice']);
+  $order['totalAmount'] = $deliveryCost + $productsData['productsPrice'];
   $order['createdAt'] = time();
 
   return $order;
@@ -204,27 +207,14 @@ function createOrder($link, $result, $order){
   if (empty($result) || $result['error']) {
     goto endFunc;
   }
-  if (!$link) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";
-    goto endFunc;
-  }
-  if (empty($order) || !is_array($order) || count($order) < 1) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $dataErr['dataInFunc'] . "($funcName)";
-    goto endFunc;
-  }
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (empty($order) || !is_array($order) || count($order) < 1) {$result['error'] = true;$result['code'] = 500;$result['message'] = $dataErr['dataInFunc'] . "($funcName)";goto endFunc;}
 
   if (!empty($order['items']) && is_array($order['items']) && count($order['items']) > 0) {
     //Преобразуем в строку json для сохранения в БД
     $order['items'] = json_encode($order['items'], JSON_UNESCAPED_UNICODE);
   } else {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['productsNotFound'] . "($funcName)";
-    goto endFunc;
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['productsNotFound'] . "($funcName)";goto endFunc;
   }//Если нет товаров для добавления, выходим с ошибкой
 
   if (!empty($order['delivery_info']) && is_array($order['delivery_info']) && count($order['delivery_info']) > 0) {
@@ -286,46 +276,55 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
     LEFT OUTER JOIN statuses ON orders.status_id = statuses.id 
     LEFT OUTER JOIN delivery_types ON orders.deliveryType_id = delivery_types.id
     LEFT OUTER JOIN payment_types ON orders.paymentType_id = payment_types.id
-    WHERE orders.id = $orderId";
+    WHERE orders.id = ?";
+
   try {
-    $sqlResult = mysqli_query($link, $sql);
-  } catch (Exception $e) {
-    $emessage = $e->getMessage();
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";
-    goto endFunc;
-  }
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param("i", $orderId);
+    $stmt->execute(); 
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
+  }catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
 
-  if (mysqli_num_rows($sqlResult) === 0) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $dbError['recordNotFound'] . "($funcName)";
-  }
+  if ($numRows === 0) {$result['error'] = true;$result['code'] = 500;$result['message'] = $dbError['recordNotFound'] . "($funcName)";}
+  $row = $response->fetch_assoc();//парсинг
 
-  $row = mysqli_fetch_array($sqlResult);//парсинг
   $order = [];
   $order['id'] = $row['id'];
   $order['deliveryCost'] = $row['deliveryCost'];
   $order['deliveryType_id'] = $row['deliveryType_id'];
-  $order['deliveryType'] = $row['deliveryType' . $language[$lng]];
+  $order['deliveryType'] = $row['deliveryType'];
   !empty($row['delivery_info']) ? $order['delivery_info'] = json_decode($row['delivery_info']) : NULL;
   $order['firstName'] = $row['firstName'];
   $order['lastName'] = $row['lastName'];
   $order['phone'] = $row['phone'];
   $order['email'] = $row['email'];
   $order['paymentType_id'] = $row['paymentType_id'];
-  $order['paymentType'] = $row['paymentType' . $language[$lng]];
+  $order['paymentType'] = $row['paymentType'];
   $order['comment'] = $row['comment'];
   $order['status_id'] = $row['status_id'];
-  $order['statusName'] = $row['statusName' . $language[$lng]];
+  $order['statusName'] = $row['statusName'];
   $order['items'] = json_decode($row['items']);
-  $order['createdAt'] = $row['createdAt'];
-  $order['updatedAt'] = $row['updatedAt'];
+
+  if (!empty($row['createdAt'])){
+    $date = new DateTime("@{$row['createdAt']}");
+    $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+    $order['createdAt'] = $date->format("d-m-Y H:i:s");
+  }else{
+    $order['createdAt']=$row['createdAt'];
+  }
+  if (!empty($row['updatedAt'])){
+    $date = new DateTime("@{$row['updatedAt']}");
+    $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+    $order['updatedAt'] = $date->format("d-m-Y H:i:s");
+  }else{
+    $order['updatedAt']=$row['updatedAt'];
+  }
   $order['totalAmount'] = $row['totalAmount'];
 
   $result['order'] = $order;
-
 
   endFunc:
   return $result;
@@ -376,7 +375,6 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
 function prepareOrderData($link, $result, $reqLanguage, $postDataJson)
 {
   include 'scripts/variables.php';
-  include 'deliveryOp';
   $funcName = 'prepareOrderData' . '_func';
   if (empty($result) || $result['error']) {
     goto endFunc;
@@ -437,7 +435,7 @@ function prepareOrderData($link, $result, $reqLanguage, $postDataJson)
   //------------Проверка доставки------------
   if (!$result['error']) {
     //Запрос инфо о доставке и обработка ответа
-    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'], $requestLanguage, true, true);
+    $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'], $reqLanguage, true, true);
     if ($result['error']) {
       goto endFunc;
     }
@@ -478,12 +476,6 @@ function prepareOrderData($link, $result, $reqLanguage, $postDataJson)
     } else {
       $result['error'] = true;
       $messages[] = 'Invalid House!';
-    }
-    if (!empty($postDataJson['entrance'])) {
-      $address['entrance'] = $postDataJson['entrance'];
-    }
-    if (!empty($postDataJson['apartment'])) {
-      $address['apartment'] = $postDataJson['apartment'];
     }
   } else {
     $address = null;
@@ -577,6 +569,17 @@ function getOrders($link, $result, $userId, $reqLanguage)
     $orders = $response->fetch_all(MYSQLI_ASSOC);
     foreach ($orders as &$order) {
       !empty($order['delivery_info']) ? $order['delivery_info'] = json_decode($order['delivery_info']) : NULL;
+      if (!empty($order['createdAt'])){
+        $date = new DateTime("@{$order['createdAt']}");
+        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+        $order['createdAt'] = $date->format("d-m-Y H:i:s");
+      }
+      if (!empty($order['updatedAt'])){
+        $date = new DateTime("@{$order['updatedAt']}");
+        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+        $order['updatedAt'] = $date->format("d-m-Y H:i:s");
+      }
+
       $order['items'] = json_decode($order['items']);
     }
     

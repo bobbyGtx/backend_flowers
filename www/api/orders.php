@@ -45,8 +45,6 @@ if ($method === 'OPTIONS') {
   "city": "Saarbrucken",
   "street": "Königsberger Str.",
   "house": "2",
-  "entrance": "1",
-  "apartment": "13",
   "comment": "вава"
   }
    */
@@ -59,7 +57,7 @@ if ($method === 'OPTIONS') {
   500 - ошибки входящих данных в функции
    */
 
-  $result = ['error' => false, 'code' => 200, 'message' => 'Order placed!'];//Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
   
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
@@ -83,29 +81,28 @@ if ($method === 'OPTIONS') {
   $incOrder = $result['incOrder']; unset($result['incOrder']);
   
   $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
-  if ($result['address']){$address = $result['address']; unset($result['address']);}
+  if (isset($result['address'])){$address = $result['address']; unset($result['address']);}
   
 //-----Начинаем обработку карзины пользователя-----
 //-----Получение списка товаров в корзине пользователя-----
   $result = getCart($link, $result, $userId);
   if ($result['error']){goto endRequest;}
-  if (count($result['userCartItems'])<1 ){
+  if (!$result['userCart'] || count($result['userCart'])<1 ){
     $result['error']=true; $result['code']=400; $result['message']=$errors['cartEmpty'];goto endRequest;
   }//Если корзина пустая - ошибка
-
-  $userCartItems = $result['userCartItems']; unset($result['userCartItems']);
+  $userCartItems = $result['userCart']['items']; unset($result['userCart']);
 
 //-----Получение всей информации о товарах в корзине, формирование массива с новыми остатками товаров на складе-----
-  $result = cartToOrder($link,$result,$userCartItems,$reqLanguage);
+  $result = cartToOrder($link,$result,$userCartItems,$userId,$reqLanguage);
   if ($result['error']){goto endRequest;}
 
-  $orderProducts = $result['products']; unset($result['products']);//Детализированный список продуктов в карзине
+  $productsData = $result['productsData']; unset($result['productsData']);//Детализированный список продуктов в карзине и общая стоимость
   $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Массив с новыми остатками товаов на складе
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
   
-  $order=compileOrderData($incOrder, $selectedDelivery, $address, $orderProducts, $userId);
+  $order=compileOrderData($incOrder, $selectedDelivery, $address, $productsData, $userId);
   // Выключаем автокоммит. Начинаем транзакцию
   mysqli_autocommit($link, false);
   //1) Проверить выбранное кол-во товаров на доступность и уменьшить их кол-во на складе
