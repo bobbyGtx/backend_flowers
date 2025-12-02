@@ -16,34 +16,25 @@ if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
   return;
 } elseif ($method === 'PATCH') {
+  //Если поле есть, то оно было изменено. Если поле пустое, то его нужно обнулить. Если поля нет, ничего делать не нужно
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
-  include 'scripts/paymentOp.php';
-  $reqName = 'user [PATCH]'; 
+  include 'scripts/paymentOp.php'; 
 
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['recordChanged']];//Создание массива с ответом Ок
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . "($reqName)" . $db_connect_response['message']; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;
   } else $settings = getSettings($link);//Получение ключа шифрования.
 
   if ($settings == false) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings'] . "($reqName)"; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endRequest;
   } else  $key = $settings['secretKey'];//ключ шифрования паролей
 
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userDNotFound'] . "($reqName)"; goto endRequest;
-    }
-  }
-  
+  if ($result['error']) goto endRequest;
+  if ($result['userId'] && $result['userPassword']&& $result['userEmail']) {$userId = $result['userId'];$userPwd = $result['userPassword'];$userEml = $result['userEmail'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
+
   /*Пример данных'{
         "firstName": "Gregor",
         "lastName": "Müller",
@@ -69,40 +60,31 @@ if ($method === 'OPTIONS') {
   $postDataJson = json_decode($patchData, true);//парсинг параметров запроса
 
 //============= Обработка полученных данных и формирование изменений =============
-  $result = prepareNewData($result, $postDataJson);
+  $result = prepareNewData($result,$link, $postDataJson,$userEml,$userPwd,$key);
   if ($result['error']) goto endRequest;
-  $newData = $result['newData']; unset($result['newData']);
+  $newData = $result['newData'];unset($result['newData']);
 
   //============= Запрос в БД для применения изменений =============
-  $result = updateUserData($link, $result, $userId,$newData);
+  $result = updateUserData($link, $result, $userId, $newData);
   if ($result['error']) goto endRequest;
     
   //$result['debug'] = $result;
   //============= Запрос в БД для получения измененной записи =============
-  $result = getUserInfo($link, $result, $userId, $reqLanguage);
+  $result = getUserInfo($link, $result, $userId);
   if ($result['error']) goto endRequest;
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
-  $reqName = 'user [GET]';
+
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
 
-  $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
-  if ($db_connect_response['error'] == true || !$link) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] ."($reqName)". $db_connect_response['message']; goto endRequest;
-  }
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
+
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId']){
-      $userId = $result['userId'];
-      unset($result['userId']);
-      unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userIdNotFound']."($reqName)"; goto endRequest;
-    }
-  }
-  $result = getUserInfo($link, $result, $userId, $reqLanguage);
+  if ($result['error']) goto endRequest;
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+
+  $result = getUserInfo($link, $result, $userId);
   if ($result['error']) goto endRequest;
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
@@ -111,4 +93,4 @@ if ($method === 'OPTIONS') {
 endRequest:
 if ($link) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);

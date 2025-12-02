@@ -4,14 +4,9 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
   include 'variables.php';
   $funcName = 'cartToOrder_func';
 
-  if (empty($result) || $result['error']) {
-    goto endFunc;
-  }
-  if (!$link) {
-    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;
-  }
-  if (!is_array($userCartItems)){$result['error'] = true;$result['message'] = $errors['productsNotFound'] . "($funcName)";goto endFunc;}
-  if (count($userCartItems) < 1) {$result['count'] = 0;goto endFunc;}
+  if (empty($result) || $result['error']) goto endFunc;
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (!is_array($userCartItems) || count($userCartItems) < 1){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['productsNotFound'] . "($funcName)";goto endFunc;}
 
   //Подготовка запроса информации всех товаров из корзины пользователя
   $sqlStr = '';//Переменная для создания условия запроса (всё что после WHERE) 
@@ -46,37 +41,24 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
   }
 
   if ($numRows === 0) {
-    if ($result['error']) {
-      goto endFunc;
-    } else {
-      if (count($userCartItems) > 0) {
-        $result = updateUserCart($link, $result, $userId, NULL, NULL, NULL);
-        if (!$result['error']) {
-          $result['message'] = 'All products from cart were not found in the database and were removed from the cart.';
-        } else {
-          goto endFunc;
-        }
-      }
-      $result['items'] = [];
-      $result['itemsInCart'] = 0;
-      goto endFunc;
-    }
+    $result = updateUserCart($link, $result, $userId, NULL, NULL, NULL);
+    $result['error'] = true; $result['code'] = 409;$result['message'] = $errors['allProductsCleared'];goto endFunc;
   }//Если товары из корзины не найдены в БД, чистим карзину
 
   $rows = $response->fetch_all(MYSQLI_ASSOC);//парсинг 
-
+  $messages = [];
   if (count($rows) <> count($userCartItems)) {
-    $priorityMsg = 'Some [' . count($userCartItems) - count($rows) . '] products were not found in the database and were removed from the cart.';
     $newProducts = [];
     foreach ($rows as $product) {
       $newProducts[] = ['quantity' => $quantities[$product['id']], 'productId' => $product['id']];
     }
     $result = updateUserCart($link, $result, $userId, $newProducts, NULL, time());
     unset($newProducts);
-  }
-  $products = [];
+    $result['error'] = true; $result['code'] = 400;$result['message'] ='('. count($userCartItems) - count($rows) .')'.$infoErrors['someProductsRemoved'];
+  }//Если были найдены неизвестные продукты в корзине, удаляем их и перезаписываем корзину
+  $products = [];//продукты без картинок для сохраннеия в БД
+  $productsFull = [];//Продукты с картинками для фронтенда и почты
   $productsPrice = 0; //$quantities - quantities
-  $messages = [];
   $updatesProducts = [];//Массив для изменения остатка заказанных товаров в БД
 
   //Проверка товаров.
@@ -85,26 +67,25 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
     $quantityInStock = intval($product['count']);//доступно на складе
     if (($quantityInStock - $quantity) < 0) {
       $result['error'] = true;
-      $messages[] = "Not enough product (" . $product['name'] . ") in stock.";
+      $messages[] = "Not enough product in stock. (". $product['name'].")";
     }
     if ($product['disabled']) {
       $result['error'] = true;
-      $messages[] = "Product (" . $product['name'] . ") in the cart is not available.";
+      $messages[] = "Product from cart is not available. (". $product['name'] . ")" ;
     }
     $updatesProducts[intval($product['id'])] = ($quantityInStock - $quantity);//подготавливаем массив для изменения кол-ва товара на складе и возвращаем его
     $totalProductPrice = $quantity * intval($product['price']);
     $productsPrice += $totalProductPrice;
     $item = ['id' => $product['id'], 'name' => $product['name'], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
-    $products[] = $item;
+    $products[] = ['id' => $product['id'], 'name' => $product['name'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price']];
+    $productsFull[]=['id' => $product['id'], 'name' => $product['name'], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
   }
 
   if ($result['error'] && count($messages) > 0) {
-    $result['code'] = 406;$result['message'] = $infoErrors['notEnoughtGoods'];$result['messages'] = $messages;goto endFunc;}//Если найдены нестыковки по кол-ву товаров - выходим
-  $result['productsData'] = ["products"=>$products, "productsPrice"=>$productsPrice];
+    $result['code'] = 409;$result['message'] = $infoErrors['createOrderError'];$result['messages'] = $messages;goto endFunc;
+  }//Если найдены нестыковки по кол-ву товаров - выходим
+  $result['productsData'] = ["products"=>$products, "productsFull"=>$productsFull,"productsPrice"=>$productsPrice];
   $result['updatesProducts'] = $updatesProducts;
-  if (!empty($priorityMsg)) {
-    $result['message'] = $priorityMsg;
-  }
 
   endFunc:
   return $result;
@@ -142,16 +123,16 @@ function updateProductsCounts($link, $result, $updatesProducts)
   $idsSql = implode(',', $ids);
   // Финальный запрос
   $sql = "
-UPDATE products
-SET 
+    UPDATE products
+    SET 
     count = CASE id
         $caseSql
     END,
     disabled = (CASE id
         $caseSql
     END = 0)
-WHERE id IN ($idsSql);
-";
+    WHERE id IN ($idsSql);
+  ";
   try {
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e) {
@@ -372,148 +353,104 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
 }*/
 }//получение информации о заказах
 
-function prepareOrderData($link, $result, $reqLanguage, $postDataJson)
-{
+function prepareOrderData($link, $result, $reqLanguage, $postDataJson){
   include 'scripts/variables.php';
   $funcName = 'prepareOrderData' . '_func';
   if (empty($result) || $result['error']) {
     goto endFunc;
   }
-  if (!$link) {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";
-    goto endFunc;
-  }
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
   if (!$postDataJson || !is_array($postDataJson) || count($postDataJson) < 1) {
-    $result['error'] = true;
-    $result['message'] = $dataErr['notRecognized'] . "($funcName)";
-    goto endFunc;
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $dataErr['notRecognized'];goto endFunc;
   }
 
   $messages = [];//Массив для ошибок
   $incOrder = [];//Переменная для сбора входящих данных заказа
-  if (!empty($postDataJson['deliveryType']) && intval($postDataJson['deliveryType']) > 0) {
+  if (isset($postDataJson['deliveryType']) && intval($postDataJson['deliveryType']) > 0) {
     $incOrder['deliveryTypeId'] = intval($postDataJson['deliveryType']);
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid deliveryType';
+    $result['error'] = true;$messages[] = 'Invalid delivery type!';
   }
-  if (!empty($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))) {
+  if (isset($postDataJson['firstName']) && (preg_match($firstNameRegEx, $postDataJson['firstName']))) {
     $incOrder['firstName'] = $postDataJson['firstName'];
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid First Name!';
+    $result['error'] = true; $messages[] = 'Invalid first name!';
   }
-  if (!empty($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))) {
+  if (isset($postDataJson['lastName']) && (preg_match($lastNameRegEx, $postDataJson['lastName']))) {
     $incOrder['lastName'] = $postDataJson['lastName'];
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid Last Name!';
+    $result['error'] = true;$messages[] = 'Invalid last name!';
   }
-  if (!empty($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))) {
+  if (isset($postDataJson['phone']) && (preg_match($telephoneRegEx, $postDataJson['phone']))) {
     $incOrder['phone'] = $postDataJson['phone'];
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid Phone!';
+    $result['error'] = true;$messages[] = 'Invalid phone!';
   }
-  if (!empty($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))) {
+  if (isset($postDataJson['email']) && (preg_match($emailRegEx, $postDataJson['email']))) {
     $incOrder['email'] = $postDataJson['email'];
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid Email!';
+    $result['error'] = true;$messages[] = 'E-Mail is incorrect';
   }
-  if (!empty($postDataJson['paymentType']) && intval($postDataJson['paymentType']) > 0) {
+  if (isset($postDataJson['paymentType']) && intval($postDataJson['paymentType']) > 0) {
     $incOrder['paymentTypeId'] = intval($postDataJson['paymentType']);
   } else {
-    $result['error'] = true;
-    $messages[] = 'Invalid Payment Type';
+    $result['error'] = true;$messages[] = 'Invalid payment type!';
   }
-  if (!empty($postDataJson['comment'])) {
+  if (isset($postDataJson['comment'])) {
     $incOrder['comment'] = $postDataJson['comment'];
   }
   //------------Проверка доставки------------
   if (!$result['error']) {
     //Запрос инфо о доставке и обработка ответа
     $result = getDeliveryInfo($link, $result, $incOrder['deliveryTypeId'], $reqLanguage, true, true);
-    if ($result['error']) {
-      goto endFunc;
-    }
-    $selectedDelivery = $result['selectedDelivery'];
-    unset($result['selectedDelivery']);
+    if ($result['error']) goto endFunc;
+    $selectedDelivery = $result['selectedDelivery'];unset($result['selectedDelivery']);
     $needAddress = intval($selectedDelivery['addressNeed']);
   }//Делаем доп запросы только если нет ошибок
 
   //Проверка адреса если она необходима по доставке
   $address = [];
-  if ($needAddress) {
-    if (!empty($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))) {
-      $address['zip'] = $postDataJson['zip'];
-    } else {
-      $result['error'] = true;
-      $messages[] = 'Invalid ZIP Code';
-    }
-    if (!empty($postDataJson['region']) && in_array($postDataJson['region'], $regionsD)) {
-      $address['region'] = $postDataJson['region'];
-    } else {
-      $result['error'] = true;
-      $messages[] = 'Invalid Region';
-    }
-    if (!empty($postDataJson['city'])) {
-      $address['city'] = $postDataJson['city'];
-    } else {
-      $result['error'] = true;
-      $messages[] = 'Invalid Сity!';
-    }
-    if (!empty($postDataJson['street'])) {
-      $address['cistreetty'] = $postDataJson['street'];
-    } else {
-      $result['error'] = true;
-      $messages[] = 'Invalid Street!';
-    }
-    if (!empty($postDataJson['house'])) {
-      $address['house'] = $postDataJson['house'];
-    } else {
-      $result['error'] = true;
-      $messages[] = 'Invalid House!';
-    }
-  } else {
-    $address = null;
-  }
+  if (isset($needAddress) && $needAddress) {
+    if (isset($postDataJson['zip']) && (preg_match($zipCodeRegEx, $postDataJson['zip']))) $address['zip'] = $postDataJson['zip'];
+    else {$result['error'] = true;$messages[] = 'Invalid ZIP code!';}
 
+    if (isset($postDataJson['region']) && in_array($postDataJson['region'], $regionsD)) $address['region'] = $postDataJson['region'];
+    else {$result['error'] = true;$messages[] = 'Invalid region!';}
+
+    if (isset($postDataJson['city']) && strlen($postDataJson['city'])>2) $address['city'] = $postDataJson['city'];
+    else {$result['error'] = true;$messages[] = 'Invalid city!';}
+
+    if (isset($postDataJson['street']) && strlen($postDataJson['street'])>2) $address['street'] = $postDataJson['street'];
+     else {$result['error'] = true;$messages[] = 'Invalid street!';}
+
+    if (isset($postDataJson['house']) && !empty($postDataJson['house'])) $address['house'] = $postDataJson['house'];
+     else {$result['error'] = true;$messages[] = 'Invalid house!';}
+
+  } else $address = null;
+  
   //Если есть ошибки данных - выводим их
   if (count($messages) > 0) {
-    $result['code'] = 406;
-    $result['message'] = $errors['dataNotAcceptable'] . "($funcName)";
-    $result['messages'] = $messages;
-    goto endFunc;
+    $result['code'] = 406;$result['message'] = $errors['dataNotAcceptable'];$result['messages'] = $messages;goto endFunc;
   }
 
   //------------Проверка доступности метода оплаты------------
   $result = checkPayment($link, $result, $incOrder['paymentTypeId'], $reqLanguage);
-  if ($result['error']) {
-    goto endFunc;
-  }
+  if ($result['error']) {goto endFunc;}
 
   //------------Вывод данных------------
   if (is_array($incOrder) && count($incOrder) > 0) {
     $result['incOrder'] = $incOrder;
   } else {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['outputtingFuncError'] . "[incOrder]($funcName)";
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['outputtingFuncError'] . "[incOrder]($funcName)";
   }//Перед выводом проверяем переменную
   if (is_array($selectedDelivery) && count($selectedDelivery) > 0) {
     $result['selectedDelivery'] = $selectedDelivery;
   } else {
-    $result['error'] = true;
-    $result['code'] = 500;
-    $result['message'] = $errors['outputtingFuncError'] . "[selectedDelivery]($funcName)";
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['outputtingFuncError'] . "[selectedDelivery]($funcName)";
   }//Перед выводом проверяем переменную
 
   if (is_array($address) && count($address) > 0)
     $result['address'] = $address;
-
 
   endFunc:
   return $result;
@@ -542,7 +479,6 @@ function getOrders($link, $result, $userId, $reqLanguage)
     o.comment,
     o.status_id, s.statusName$reqLanguage as statusName,
     o.items,
-    o.user_id,
     o.totalAmount,
     o.createdAt,
     o.updatedAt

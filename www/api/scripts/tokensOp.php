@@ -10,7 +10,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
       //$result['error'] = true;$result['code'] = 402;$result['message'] = 'Token invalid! (Unable to recognize Token).'; return $result;
    }
    
-   $sql = "SELECT `id`, `password`,`$accTokenField`,`$accTokenLifeField` FROM `$userTableName` WHERE `$accTokenField` = '" . $http_AccessToken . "'";
+   $sql = "SELECT `id`, `password`, `email`,`$accTokenField`,`$accTokenLifeField` FROM `$userTableName` WHERE `$accTokenField` = '" . $http_AccessToken . "'";
    $sqlSelRecord = mysqli_query($link, $sql);//выполняем запрос
    if (empty($sqlSelRecord)) {
       $result['error'] = true;$result['code'] = 500;$result['message'] = $errors['reqRejected'] . "($funcName)";return $result;
@@ -22,6 +22,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
    $record = mysqli_fetch_array($sqlSelRecord);//парсинг
    $userId = $record['id'];//id пользователя
    $userPwd = $record['password'];//password пользователя
+  $userEmail = $record['email'];//email пользователя
    $accessToken = $record[$accTokenField];//токен из базы
    $accTokenTime = $record[$accTokenLifeField];//дата по которую токен действует
    if (empty($userId) || empty($accessToken)) {
@@ -32,7 +33,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
       $result['error'] = true;$result['code'] = 401;$result['message'] = $authError['accTokenOutOfDate']; return $result;
    }
    if ($userData){
-      $result['userId'] = $userId; $result['userPassword'] = $userPwd;   
+      $result['userId'] = $userId; $result['userPassword'] = $userPwd; $result['userEmail'] = $userEmail;
    }
    return $result;
 }

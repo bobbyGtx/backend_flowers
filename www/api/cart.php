@@ -260,7 +260,7 @@ endRequest:
 if (!empty($link)) mysqli_close($link);
 if (isset($result['cartAction'])) unset($result['cartAction']);//удаление внутреннего флага
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);
 
  /* Out {
     "items": [

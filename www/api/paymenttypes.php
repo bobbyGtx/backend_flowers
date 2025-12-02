@@ -43,6 +43,7 @@ if ($method === 'OPTIONS') {
   }
   
   $result['paymentTypes'] = $response->fetch_all(MYSQLI_ASSOC);
+
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }

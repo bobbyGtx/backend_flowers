@@ -20,14 +20,15 @@ $productsPerPage = 9;//Параметр для пагинации. Кол-во �
 //Регулярки для проверки значений
 $emailRegEx = '/^(([^<>()[\].,;:\s@"]+(\.[^<>()[\].,;:\s@"]+)*)|(".+"))@(([^<>()[\].,;:\s@"]+\.)+[^<>()[\].,;:\s@"]{2,})$/iu';
 $passwordRegEx = '/^.{6,}$/';
-$telephoneRegEx = '/^\+[1-9]\d{1,14}$/iu';//+14155552671, +497116666777
-$firstNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*(?:\s[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*)*)$/';
-$lastNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*(?:\s[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*)*)$/';
+$telephoneRegEx = '/^\+[1-9]\d{11,12}$/iu';//+14155552671, +497116666777
+$firstNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*(?:\s[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*)*)$/u';
+$lastNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*(?:\s[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*)*)$/u';
 $zipCodeRegEx = '/^[0-9]{5}$/';
+$houseNumberRegEx = '/^\d{1,3}[A-Za-z]?$/';
 $accessTokenRegEx='/^[a-zA-Z0-9]{'.$accTokenLenght.'}$/';
 $refreshTokenRegEx='/^[a-zA-Z0-9]{'.$refrTokenLenght.'}$/';
 $regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];
-//Рассчёт путей на основное использование из папки api
+//Расчёт путей на основное использование из папки api
 $noFotoFileName = 'no-image.jpg';//название файла заглушки картинки
 $photoDir = '../assets/';//Директория с фото. Обязательно с точки
 
@@ -40,8 +41,8 @@ $errors['insertReqRejected']='Request (INSERT) rejected by database. ';
 $errors['updReqRejected']='Request (UPDATE) rejected by database. ';
 $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
-$errors['deliveryIdNotFound'] ='Delivery identifier not found! '; 
-$errors['paymentIdNotFound'] ='Payment method identifier not found! '; 
+$errors['deliveryIdNotFound'] ='Delivery identifier not found!';//400, 406
+$errors['paymentIdNotFound'] ='Payment method identifier not found!'; //500, 400, 406
 $errors['userIdNotFound'] = 'User ID not found in function! ';//500
 $critErr['productUrlNotFound'] ='Product URL not found in function! ';//500
 $errors['orderIdNotFound'] = 'Order ID not found in function! ';
@@ -63,14 +64,15 @@ $errors['productNotFound'] = 'Product not found! ';//400
 $errors['productsNotFound'] = 'Products not found!';
 $errors['userDataNotFound'] = 'User ID not found! ';
 $errors['dataNotFound'] = 'No data was passed to the function or it was incorrect. ';
-$errors['cartEmpty'] = 'Critical error! User cart empty! ';
+$errors['cartEmpty'] = 'User cart empty!';
 $errors['unexpectedFuncResult'] = 'Unexpected result from function! ';
 $errors['cartRebaseImpossible'] = 'Cart rebase impossible. User have a cart!';
+$errors['allProductsCleared'] = 'All products from cart were not found in the database and were removed from the cart.';
 
 $errors['MethodNotAllowed']='Method Not Allowed';
-$errors['dataNotAcceptable'] = 'Data not acceptable!';
+$errors['dataNotAcceptable'] = 'Data not acceptable!';//406
 
-$dataErr['notRecognized'] = 'Request parameters not recognized!';//Code 400
+$dataErr['notRecognized'] = 'Request parameters not recognized!';//Code 500
 $dataErr['dataInFunc'] = 'Error in data passed to the function!';
 $dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized!';
 
@@ -78,15 +80,16 @@ $critErr['userDNotFound'] ='Critical error! User data not found in record.';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record.';
 
 
-$infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now! ';
-$infoErrors['paymentNotPos'] = 'Selected Payment method not possible now! ';
+$infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';//400
+$infoErrors['paymentNotPos'] = 'Selected Payment method not possible now!';
 $infoErrors['notEnoughtGoods'] = 'Not enough goods in stock.';
+$infoErrors['createOrderError'] = 'Create order error.';
 $infoErrors['productNotAvailable'] = 'Requested product is currently unavailable!';
 $infoErrors['nothingToChange'] = 'Nothing to change!';
 $infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system.';
-$infoErrors['someProductsRemoved'] = 'Unrecognized products were removed.';
+$infoErrors['someProductsRemoved'] = 'Unrecognized products were removed.';//400
 
-$errors['emailIsBusy'] = 'EMail is busy!';//400
+$errors['emailIsBusy'] = 'E-Mail is busy!';//400, 406
 $errors['emailNotRecognized'] = 'E-Mail not recognized!';//500
 
 $authError['loginOrPassNC'] ='Login or password not correct!';

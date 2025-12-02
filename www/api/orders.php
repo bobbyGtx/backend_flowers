@@ -65,15 +65,8 @@ if ($method === 'OPTIONS') {
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {goto endRequest;}
-  else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];unset($result['userId']);
-      $userPwd = $result['userPassword'];unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userDNotFound']; goto endRequest;
-    }//Проверка наличия логина и пароля
-  }
+  if ($result['error']) goto endRequest;
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
 
 //-----Обработка входных данных-----
   $result = prepareOrderData($link, $result,$reqLanguage, $postDataJson);
@@ -81,14 +74,16 @@ if ($method === 'OPTIONS') {
   $incOrder = $result['incOrder']; unset($result['incOrder']);
   
   $selectedDelivery = $result['selectedDelivery']; unset($result['selectedDelivery']);
-  if (isset($result['address'])){$address = $result['address']; unset($result['address']);}
   
+  $address = null;
+  if (isset($result['address'])){$address = $result['address']; unset($result['address']);}
+
 //-----Начинаем обработку карзины пользователя-----
 //-----Получение списка товаров в корзине пользователя-----
   $result = getCart($link, $result, $userId);
   if ($result['error']){goto endRequest;}
-  if (!$result['userCart'] || count($result['userCart'])<1 ){
-    $result['error']=true; $result['code']=400; $result['message']=$errors['cartEmpty'];goto endRequest;
+  if (!isset($result['userCart']) || !is_array($result['userCart']) || count($result['userCart'])===0){
+    $result['error']=true; $result['code']=409; $result['message']=$errors['cartEmpty'];goto endRequest;
   }//Если корзина пустая - ошибка
   $userCartItems = $result['userCart']['items']; unset($result['userCart']);
 
@@ -96,8 +91,10 @@ if ($method === 'OPTIONS') {
   $result = cartToOrder($link,$result,$userCartItems,$userId,$reqLanguage);
   if ($result['error']){goto endRequest;}
 
-  $productsData = $result['productsData']; unset($result['productsData']);//Детализированный список продуктов в карзине и общая стоимость
+  $productsFull = $result['productsData']['productsFull']; unset($result['productsData']['productsFull']);//Список продуктов с картинками и стоимостью по товарам для Email
+  $productsData = $result['productsData'];unset($result['productsData']);//Детализированный список продуктов в корзине и общая стоимость
   $updatesProducts = $result['updatesProducts']; unset($result['updatesProducts']); //Массив с новыми остатками товаов на складе
+  
   if (!is_array($updatesProducts)||count($updatesProducts)===0){
     $result['error'] = true; $result['code'] = 501; $result['message'] = "The array of changes to the number of products was not found."; goto endRequest;
   }
@@ -140,21 +137,11 @@ if ($method === 'OPTIONS') {
   }
  
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-    }
-  }
+  if ($result['error']) goto endRequest;
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
 
   $result = getOrders($link, $result, $userId, $reqLanguage);
   if ($result['error']) goto endRequest;
-
 
 } else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
@@ -163,7 +150,7 @@ if ($method === 'OPTIONS') {
 endRequest:
 if ($link) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);
 
 
 /* 
