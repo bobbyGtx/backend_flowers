@@ -62,7 +62,7 @@ if ($method === 'OPTIONS') {
 //============= Обработка полученных данных и формирование изменений =============
   $result = prepareNewData($result,$link, $postDataJson,$userEml,$userPwd,$key);
   if ($result['error']) goto endRequest;
-  $newData = $result['newData'];unset($result['newData']);
+  $newData = $result['newData'];//unset($result['newData']);
 
   //============= Запрос в БД для применения изменений =============
   $result = updateUserData($link, $result, $userId, $newData);

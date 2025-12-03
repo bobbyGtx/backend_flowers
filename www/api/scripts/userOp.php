@@ -225,6 +225,34 @@ function updateUserData($link, $result, $userId, $newData) {
 
   $newData['updatedAt'] = time();//Добавление временной метки
 
+  $fieldValues = [];//Значения полей
+  $fieldTypes='';//Типы данных полей (i = integer)(s = string)
+  $setParts = [];//группы параметров [поле = ?]
+  foreach ($newData as $key => $value){
+    $setParts[]="$key = ?";
+    if (is_array($value)) {
+      $fieldValues[]=json_encode($value, JSON_UNESCAPED_UNICODE);
+      $fieldTypes.='s';
+    }else{
+      $fieldValues[]=is_null($value)?null:$value;
+      $fieldTypes.=is_int($value)?'i':'s';
+    }
+  }
+  $setSql = implode(',',$setParts);//[firstName = ?, lastName = ?, address = ?]
+  $sql = "UPDATE users SET $setSql WHERE id = ?";
+  $fieldValues[]=$userId;$fieldTypes.='i';//добавляем userId
+
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param($fieldTypes, ...$fieldValues);
+    $stmt->execute();
+    $affectedRows = mysqli_stmt_affected_rows($stmt);//Кол-во затронутых полей
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  if ($affectedRows===0) {$result['error'] = true;$result['code'] = 500;$result['message']='Ни одна запись не была изменена';goto endFunc;}
+
+  /*Удалить после тестов
   $sqlUpdateStr = "UPDATE `$userTableName` SET ";
   $j = 0;
   $dinSqlStr = '';
@@ -235,24 +263,19 @@ function updateUserData($link, $result, $userId, $newData) {
         $jsonEnc = json_encode($v, JSON_UNESCAPED_UNICODE);
         $dinSqlStr = $dinSqlStr . "`$k` = '$jsonEnc',";
       } else {
-        if (is_null($v))$v='NULL';
-        $dinSqlStr = $dinSqlStr . "`$k` = '$v',";
+        $dinSqlStr = is_null($v)?$dinSqlStr . "`$k` = NULL,":$dinSqlStr . "$k = '$v',";
       }
     } else {
       if (is_array($v)) {
         $jsonEnc = json_encode($v, JSON_UNESCAPED_UNICODE);
         $dinSqlStr = $dinSqlStr . "`$k` = '$jsonEnc'";
       } else {
-        if (is_null($v))$v='NULL';
-        $dinSqlStr = $dinSqlStr . "`$k` = '$v'";
+        $dinSqlStr = is_null($v)?$dinSqlStr . "$k = NULL":$dinSqlStr . "$k = '$v'";
       }
     }
   }
-  $sqlUpdateStr .= $dinSqlStr . " WHERE users.id = '" . $userId . "';";
+  $sqlUpdateStr .= $dinSqlStr . " WHERE users.id = $userId;";
   //============= Запрос в БД =============
-  $result['sql'] = $sqlUpdateStr;
-  $result['crudeData'] = $newData;
-  goto endFunc;
   try {
     $sqlResult = mysqli_query($link, $sqlUpdateStr);
   } catch (Exception $e) {
@@ -262,7 +285,7 @@ function updateUserData($link, $result, $userId, $newData) {
     $result['message'] = $errors['updReqRejected'] . "($funcName) ($emessage)";
     goto endFunc;
   }
-
+*/
   endFunc:
   return $result;
 }//Сохранение изменений в учетную запись пользователя
@@ -270,7 +293,7 @@ function updateUserData($link, $result, $userId, $newData) {
 /*
  * Функция проверяет переданные в запрос данные и обрабатывает их.
  * Если ключ найден, а значение нулевое null, 0, "0",'', false - то данные удаляются из базы.
- * Поле Email обязательное и остается не тронутым, если оно не изменено.
+ * Поле Email обязательное и остается не тронутым, если оно не изменено. При его изменении сбрасывается верификация EMail
  * Поле пароль меняется при наличии ключа newPassword.
  * Поле меняется полностью, поэтому с фронта передавать необходимо все данные не зависимо от изменения.
  * Возвращается массив ошибок валидации с кодом 406
@@ -347,7 +370,10 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
           $result['error'] = true;
           $messages[] = 'E-Mail is incorrect';
           unset($result['validationError']);
-        } else $newData['email'] = $postDataJson['email'];
+        } else {
+          $newData['emailVerification']=false;
+          $newData['email'] = $postDataJson['email'];
+        }
       } else $messages[] = 'E-Mail is incorrect';
     }
   }//Если email не изменился - игнорируем его
@@ -407,7 +433,6 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
   }//проверка инфо о доставке.
   if (array_key_exists('deliveryType_id', $postDataJson)) {
     $patchDeliveryId = !empty($postDataJson['deliveryType_id']) ? intval($postDataJson['deliveryType_id']) : null;
-    $newData['deliveryType_id'] = $patchDeliveryId;
     if (!empty($patchDeliveryId)) {
       $oldMessage = $result['message'];
       $result = getDeliveryInfo($link, $result, $patchDeliveryId, null, false, false);
@@ -418,8 +443,8 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
           $result['error']=false;$result['code']=200;$result['message']=$oldMessage;
         }else goto endFunc;
       }
-      $newData['deliveryType_id'] = $patchDeliveryId;
     }
+    $newData['deliveryType_id'] = $patchDeliveryId;
   }//проверка типа доставки
   if (array_key_exists('paymentType_id', $postDataJson)) {
     $patchPaymentId = !empty($postDataJson['paymentType_id']) ? intval($postDataJson['paymentType_id']) : null;
@@ -432,8 +457,8 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
           $result['error']=false;$result['code']=200;$result['message']=$oldMessage;
         }else goto endFunc;
       }
-      $newData['paymentType_id'] = $patchPaymentId;
     }
+    $newData['paymentType_id'] = $patchPaymentId;
   }//проверка типа оплаты
 
   if (count($messages) > 0) {
