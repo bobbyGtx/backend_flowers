@@ -357,7 +357,14 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
   }
   if (array_key_exists('email', $postDataJson) && isset($postDataJson['email'])) {
     if ($userEml !== $postDataJson['email']) {
-      if (preg_match($emailRegEx, $postDataJson['email'])) {
+      $passwordError=false;
+      if (!isset($postDataJson['password']) || empty($postDataJson['password'])){
+      $messages[] = 'Current password not found!';$passwordError = true;
+      }
+      if (!empty($postDataJson['password']) && $postDataJson['password'] !== __decode($userPwd, $key)){
+        $messages[] = 'Current password wrong.';$passwordError = true;
+      }
+      if (!$passwordError && preg_match($emailRegEx, $postDataJson['email'])) {
         $oldMessage = $result['message'];
         $result = checkEmail($link, $result, $postDataJson['email'], false);
         if ($result['error']){
@@ -367,7 +374,6 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
           }else goto endFunc;
         }
         if ($result['validationError']) {
-          $result['error'] = true;
           $messages[] = 'E-Mail is incorrect';
           unset($result['validationError']);
         } else {
@@ -414,7 +420,7 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
       if (array_key_exists('zip', $patchDeliveryInfo) && !empty($patchDeliveryInfo['zip'])) {
         if (preg_match($zipCodeRegEx, $patchDeliveryInfo['zip'])) {
           $deliveryInfo['zip'] = $patchDeliveryInfo['zip'];
-        } else $messages[] = 'ZIP code not valid!';
+        } else $messages[] = 'Invalid ZIP code!';
       }
       if (array_key_exists('city', $patchDeliveryInfo) && !empty($patchDeliveryInfo['city'])) {
         $deliveryInfo['city'] = $patchDeliveryInfo['city'];
@@ -425,7 +431,7 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
       if (array_key_exists('house', $patchDeliveryInfo) && !empty($patchDeliveryInfo['house'])) {
         if (preg_match($houseNumberRegEx, $patchDeliveryInfo['house'])) {
           $deliveryInfo['house'] = $patchDeliveryInfo['house'];
-        } else $messages[] = 'House number not valid!';
+        } else $messages[] = 'Invalid house!';
 
       }
       $newData['deliveryInfo'] = $deliveryInfo;

@@ -20,7 +20,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
       return $result;
    }//Если записей нет - то такой токен не найден в базе. Разделение нужно для след. проверки
    $record = mysqli_fetch_array($sqlSelRecord);//парсинг
-   $userId = $record['id'];//id пользователя
+   $userId = intval($record['id']);//id пользователя
    $userPwd = $record['password'];//password пользователя
   $userEmail = $record['email'];//email пользователя
    $accessToken = $record[$accTokenField];//токен из базы

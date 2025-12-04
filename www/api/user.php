@@ -27,7 +27,7 @@ if ($method === 'OPTIONS') {
     $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;
   } else $settings = getSettings($link);//Получение ключа шифрования.
 
-  if ($settings == false) {
+  if (!$settings) {
     $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endRequest;
   } else  $key = $settings['secretKey'];//ключ шифрования паролей
 

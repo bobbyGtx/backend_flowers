@@ -25,8 +25,7 @@ function dbConnect(){
   return $result;
 }
 
-function getSettings($link)
-{
+function getSettings($link) {
   if ($link) {
     include 'variables.php';
     $sql = "SELECT * FROM settings";
