@@ -33,7 +33,7 @@ if ($method === 'OPTIONS') {
 
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) goto endRequest;
-  if ($result['userId'] && $result['userPassword']&& $result['userEmail']) {$userId = $result['userId'];$userPwd = $result['userPassword'];$userEml = $result['userEmail'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
+  if ($result['userId'] && $result['userPassword'] && $result['userEmail']) {$userId = $result['userId'];$userPwd = $result['userPassword'];$userEml = $result['userEmail'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   /*Пример данных'{
         "firstName": "Gregor",
@@ -82,7 +82,7 @@ if ($method === 'OPTIONS') {
 
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) goto endRequest;
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   $result = getUserInfo($link, $result, $userId);
   if ($result['error']) goto endRequest;

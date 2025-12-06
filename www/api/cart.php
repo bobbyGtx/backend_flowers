@@ -48,7 +48,7 @@ if ($method === 'OPTIONS') {
 
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {goto endRequest;}
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   //Проверка корзины пользователя. Если в ней что-то есть, отменяем перебазирование
   $result = checkUserCart($result,$link,$userId);
@@ -97,7 +97,7 @@ if ($method === 'OPTIONS') {
  
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {goto endRequest;}
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']);}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']);}
 
   //Проверка товара перед добавлением в корзину
   $result = checkProduct($link,$result,$postProductId,$postQuantity, $reqLanguage);
@@ -180,7 +180,7 @@ if ($method === 'OPTIONS') {
   }
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {goto endRequest;}
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
  
   $result = getCart($link,$result,$userId);
   if ($result['error']) {goto endRequest;}
@@ -239,15 +239,9 @@ if ($method === 'OPTIONS') {
   } else $settings = getSettings($link);//Получение ключа шифрования.
 
   $result = checkToken($link, $result, getallheaders(),true);
-    if ($result['error']) {goto endRequest;}
-    else {
-      if ($result['userId'] && $result['userPassword']){
-        $userId = $result['userId'];unset($result['userId']);
-        $userPwd = $result['userPassword'];unset($result['userPassword']);
-      }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-      }//Проверка наличия логина и пароля
-    }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
+  
   $result = clearUserCart($link, $result, $userId);
   if ($result['error']) goto endRequest; //на всякий случай
   $result = formatUserCart($result,[],null,time());

@@ -31,17 +31,8 @@ if ($method === 'OPTIONS') {
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
 
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) {
-    goto endRequest;//Если пришла ошибка - завршаем скрипт
-  } else {
-    if ($result['userId'] && $result['userPassword']){
-      $userId = $result['userId'];
-      $userPwd = $result['userPassword'];
-      unset($result['userId']); unset($result['userPassword']);
-    }else{
-      $result['error']=true; $result['code'] = 500; $result['message'] = 'User data not found in record! Critical error.'; goto endRequest;
-    }
-  }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   //ищем инфо о товаре в базе для проверки наличия в базе и ответа
   $result = getProductShortInfo($link, $result, $postProductId, $reqLanguage);
@@ -71,7 +62,7 @@ if ($method === 'OPTIONS') {
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = 'DB connection Error! ' . $db_connect_response['message']; goto endRequest;}
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) {goto endRequest;}
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']);}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   //составляем список избранного для пользователя
   $result = getUserFavorites($link,$result, $userId);
@@ -100,15 +91,8 @@ if ($method === 'OPTIONS') {
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;}
 
   $result = checkToken($link, $result, getallheaders(),true);
-
-  if ($result['error']) goto endRequest;
-  if ($result['userId'] && $result['userPassword']){
-    $userId = $result['userId'];
-    $userPwd = $result['userPassword'];
-    unset($result['userId']); unset($result['userPassword']);
-  }else{
-    $result['error']=true; $result['code'] = 500; $result['message'] = $critErr['userDNotFound']; goto endRequest;
-  }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   $result = delFromFavorite($link, $result, $userId, $delProductId);
 } else {

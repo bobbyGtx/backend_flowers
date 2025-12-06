@@ -65,8 +65,8 @@ if ($method === 'OPTIONS') {
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) goto endRequest;
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
 //-----Обработка входных данных-----
   $result = prepareOrderData($link, $result,$reqLanguage, $postDataJson);
@@ -137,8 +137,8 @@ if ($method === 'OPTIONS') {
   }
  
   $result = checkToken($link, $result, getallheaders(),true);
-  if ($result['error']) goto endRequest;
-  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword']); }
+  if ($result['error']) {goto endRequest;}
+  if ($result['userId'] && $result['userPassword']){$userId = $result['userId'];$userPwd = $result['userPassword'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
 
   $result = getOrders($link, $result, $userId, $reqLanguage);
   if ($result['error']) goto endRequest;
