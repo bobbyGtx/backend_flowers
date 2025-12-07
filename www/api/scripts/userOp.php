@@ -18,7 +18,9 @@ function checkEmail($link, $result, $email, $checkRegex = true) {
   }
 
   if ($checkRegex && !preg_match($emailRegEx, $email)) {
-    $result['validationError'] = true;
+    $result['error'] = true;
+    $result['code'] = 406;
+    $result['message'] = $errors['emailNotValid'];
     goto endFunc;
   }
 
@@ -87,7 +89,7 @@ function getUserInfo($link, $result, $userId) {
 
   if ($numRows <> 1) {
     $result['error'] = true;
-    $result['code'] = 400;
+    $result['code'] = 500;
     $result['message'] = $dbError['unexpResponse'] . "($funcName)";
     goto endFunc;
   }
@@ -358,29 +360,34 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
   if (array_key_exists('email', $postDataJson) && isset($postDataJson['email'])) {
     if ($userEml !== $postDataJson['email']) {
       $passwordError=false;
-      if (!isset($postDataJson['password']) || empty($postDataJson['password'])){
+      if (!isset($postDataJson['oldPassword']) || empty($postDataJson['oldPassword'])){
       $messages[] = 'Current password not found!';$passwordError = true;
       }
-      if (!empty($postDataJson['password']) && $postDataJson['password'] !== __decode($userPwd, $key)){
+      if (isset($postDataJson['oldPassword']) && $postDataJson['oldPassword']===isset($postDataJson['newPassword'])){
+        $messages[] = 'Old and new passwords are the same!';$passwordError = true;
+      }
+      if (!empty($postDataJson['oldPassword']) && $postDataJson['oldPassword'] !== __decode($userPwd, $key)){
         $messages[] = 'Current password wrong.';$passwordError = true;
       }
-      if (!$passwordError && preg_match($emailRegEx, $postDataJson['email'])) {
-        $oldMessage = $result['message'];
-        $result = checkEmail($link, $result, $postDataJson['email'], false);
-        if ($result['error']){
-          if ($result['message'] === $errors['emailIsBusy']){
-            $result['error']=false; $result['code'] = 200;
-            $messages[] = $result['message']; $result['message']=$oldMessage;
-          }else goto endFunc;
-        }
-        if ($result['validationError']) {
-          $messages[] = 'E-Mail is incorrect';
-          unset($result['validationError']);
-        } else {
-          $newData['emailVerification']=false;
-          $newData['email'] = $postDataJson['email'];
-        }
-      } else $messages[] = 'E-Mail is incorrect';
+      if (!$passwordError) {
+        if (preg_match($emailRegEx, $postDataJson['email'])){
+          $oldMessage = $result['message'];
+          $result = checkEmail($link, $result, $postDataJson['email'], false);
+          if ($result['error']){
+            if ($result['message'] === $errors['emailIsBusy']){
+              $result['error']=false; $result['code'] = 200;
+              $messages[] = $result['message']; $result['message']=$oldMessage;
+            }else goto endFunc;
+          }
+          if ($result['validationError']) {
+            $messages[] = 'E-Mail is incorrect';
+            unset($result['validationError']);
+          } else {
+            $newData['emailVerification']=0;
+            $newData['email'] = $postDataJson['email'];
+          }
+        }else $messages[] = 'E-Mail is incorrect';
+      } 
     }
   }//Если email не изменился - игнорируем его
   if (array_key_exists('phone', $postDataJson)) {
@@ -392,13 +399,19 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
   }//проверка телефона
   //Если придет пустая строка, она будет проигнорирована так, как пароль обязателен
   if (array_key_exists('newPassword', $postDataJson) && !empty($postDataJson['newPassword'])) {
-    $passwordError=false;
-    if (!isset($postDataJson['password']) || empty($postDataJson['password'])){
-      $messages[] = 'Current password not found!';$passwordError = true;
-    }
-    if (!empty($postDataJson['password']) && $postDataJson['password'] !== __decode($userPwd, $key)){
-      $messages[] = 'Current password wrong.';$passwordError = true;
-    }
+    $passwordError=isset($passwordError)?$passwordError:false;
+    if (!$passwordError){
+      
+      if (!isset($postDataJson['oldPassword']) || empty($postDataJson['oldPassword'])){
+        $messages[] = 'Current password not found!';$passwordError = true;
+      }
+      if (isset($postDataJson['oldPassword']) && $postDataJson['oldPassword']===isset($postDataJson['newPassword'])){
+        $messages[] = 'The old and new passwords are the same!';$passwordError = true;
+      }
+      if (!empty($postDataJson['oldPassword']) && $postDataJson['oldPassword'] !== __decode($userPwd, $key)){
+        $messages[] = 'Current password wrong.';$passwordError = true;
+      }
+    }//Если проверка пароля ещё не была произведена
     if (!empty($postDataJson['newPassword']) && !preg_match($passwordRegEx, $postDataJson['newPassword'])){
       $messages[] = 'New password not acceptable!';$passwordError = true;
     }

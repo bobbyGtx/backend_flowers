@@ -51,7 +51,7 @@ $errors['quantityNotFound'] = 'Quantity not found in function! ';
 $errors['outputtingFuncError'] = 'Error in outputting a variable from a function! ';
 
 
-$dbError['unexpResponse'] = 'Unexpected response from Database! ';
+$dbError['unexpResponse'] = 'Unexpected response from Database! ';//500
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 $dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
 $dbError['recordNotFound'] = 'Requested Record not found! ';
@@ -90,7 +90,8 @@ $infoErrors['cartClearedBySystem'] = 'Cart has been cleared by the system.';
 $infoErrors['someProductsRemoved'] = 'Unrecognized products were removed.';//400
 
 $errors['emailIsBusy'] = 'E-Mail is busy!';//400, 406
-$errors['emailNotRecognized'] = 'E-Mail not recognized!';//500
+$errors['emailNotValid'] ='Email not valid!';//406
+$errors['emailNotRecognized'] = 'E-Mail not recognized!';//500, 400
 
 $authError['loginOrPassNC'] ='Login or password not correct!';
 $authError['emailNotFound'] ='E-mail not found in DB!';//401
