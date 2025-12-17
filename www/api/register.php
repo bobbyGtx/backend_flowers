@@ -6,16 +6,18 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
-include 'scripts/variables.php';//файл с генераторами строк
+include_once 'scripts/variables.php';//файл с генераторами строк
+include 'scripts/languageOp.php';
+include_once 'scripts/enums.php';
+$reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ('OPTIONS' === $method) {
-  http_response_code(200);//ответ на пробный запрос
-  return;
+  http_response_code(200);return;
 } elseif ('POST' === $method) {
-  include 'scripts/generators.php';//файл с генераторами строк
+  include_once 'scripts/generators.php';//файл с генераторами строк
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/userOp.php';//Проверка email и т.д.
-  include 'scripts/cartOp.php';//работа с корзинойтоваров
+  include 'scripts/cartOp.php';//работа с корзиной товаров
 
   $result = ['error' => false, 'code' => 200, 'message' => 'User registered!'];//Создание массива с ответом Ок
 
@@ -81,9 +83,15 @@ if ('OPTIONS' === $method) {
   if (empty($newUserId) && $newUserId<1){
     $result['error']=true; $result['code']=500; $result['message']="Problem with UserID. Creating Cart record in DB impossible. ($emessage))";goto endRequest;
   }
+  //Создание записи для верификации email
+  $operationType = UserOpTypes::verifyEmail;
+  $result = createUserOpRecord($result,$link,$newUserId,$operationType);
+  if ($result['error']) goto endRequest;
+  $verifyEmailData = $result['data']; unset($result['data']);
 
+  $result = sendRegisterVerificationEmail($result,$emailPost,$verifyEmailData['token'],$verifyEmailData['createdAt']);
+  if ($result['error']) goto endRequest;
   //Запись в таблице с корзиной создается при первом запросе корзины или при rebaseCart(post)
-  
 }else {
   $result['error']=true; $result['code'] = 405; $result['message'] = $errors['MethodNotAllowed'];
 }

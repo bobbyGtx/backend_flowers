@@ -1,5 +1,8 @@
 <?php
+$productionMode = true;//верификация e-mail не обязательно в true
 $settingsFile = "../../DBSettings/dbData.json";//путь из папки scripts
+$projectUrl = $productionMode?"http://amoraflowers.com.xsph.ru":"http://project.com";
+$imagesUrl = $projectUrl."/assets/";
 //переменные для работы с токенами
 $accessTokenHeader = 'x-access-token';
 $userTableName = 'users';//название таблицы с токенами
@@ -11,6 +14,11 @@ $accTokenLenght = 100;
 $refrTokenLenght = 120;
 $accTokenLife = 600000;
 $refrTokenLife = 2629743;
+$operationTokenLength = 125;//токены для сброса пароля, верификации E-Mail и смены E-Mail
+$verifyEmailTokenLife = 0;//Время жизни токена, подтверждающего Email при регистрации. 0 = бессрочно
+$changeEmailTokenLife = 7200;//Время жизни токена, подтверждающего новый Email при смене почты
+$resetPasswordTokenLife = 7200;//Время жизни токена для сброса пароля
+
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
 $startOrderStatus = 1;//Индекс начального статуа при создании заказа
@@ -27,10 +35,13 @@ $zipCodeRegEx = '/^[0-9]{5}$/';
 $houseNumberRegEx = '/^\d{1,3}[A-Za-z]?$/';
 $accessTokenRegEx='/^[a-zA-Z0-9]{'.$accTokenLenght.'}$/';
 $refreshTokenRegEx='/^[a-zA-Z0-9]{'.$refrTokenLenght.'}$/';
+$opTokenRegEx='/^[a-zA-Z0-9]{'.$operationTokenLength.'}$/';
+
 $regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];
 //Расчёт путей на основное использование из папки api
 $noFotoFileName = 'no-image.jpg';//название файла заглушки картинки
 $photoDir = '../assets/';//Директория с фото. Обязательно с точки
+
 
 $errors['dbConnect'] = 'DB connection Error! ';//Ошибка соединения с БД
 $errors['dbConnectInterrupt'] = 'Connection with DB interrupt. ';//Ошибка соединения с БД
@@ -50,7 +61,6 @@ $errors['productIdNotFound'] = 'Product ID not found in function! ';
 $errors['quantityNotFound'] = 'Quantity not found in function! ';
 $errors['outputtingFuncError'] = 'Error in outputting a variable from a function! ';
 
-
 $dbError['unexpResponse'] = 'Unexpected response from Database! ';//500
 $dbError['cartNotFound'] = 'Critical error! User cart not found! ';
 $dbError['tableNameNotFound'] = 'Critical error! Table name not found! ';
@@ -68,6 +78,7 @@ $errors['cartEmpty'] = 'User cart empty!';
 $errors['unexpectedFuncResult'] = 'Unexpected result from function! ';
 $errors['cartRebaseImpossible'] = 'Cart rebase impossible. User have a cart!';
 $errors['allProductsCleared'] = 'All products from cart were not found in the database and were removed from the cart.';
+$errors['tokenFieldNotFound'] = 'Token field name not found in fieldList.';//500
 
 $errors['MethodNotAllowed']='Method Not Allowed';
 $errors['dataNotAcceptable'] = 'Data not acceptable!';//406
@@ -78,7 +89,6 @@ $dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized!';
 
 $critErr['userDNotFound'] ='Critical error! User data not found in record.';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record.';
-
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';//400
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now!';
@@ -104,6 +114,10 @@ $authError['accTokenNotFound'] = 'Access token not found or has not valid format
 $authError['refrTokenNotFound'] = 'Refresh token not found or has not valid format!';//401
 $authError['accTokenInvalid'] = 'Access token invalid!';//401
 $authError['accTokenOutOfDate'] = 'Access token out of date!';//401
+$error['opTokenInvalid'] = 'Operation token invalid!';//500, 400
+$error['opTokenNotFound'] = 'Operation token not found!';//500
+$error['opTokenOutOfDate'] = 'Operation token out of date!';//400
+$error['timeStampNotFound'] = 'Timestamp not found';//500
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';

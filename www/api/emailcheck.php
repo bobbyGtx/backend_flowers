@@ -37,6 +37,6 @@ if ($method === 'OPTIONS') {
 }
 
 endRequest:
-if ($link) mysqli_close($link);
+if (isset($link)) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
 echo json_encode($result);

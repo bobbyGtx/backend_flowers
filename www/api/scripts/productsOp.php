@@ -283,7 +283,9 @@ function searchProducts($link, $result, $searchStr, $languageTag=''){
     INNER JOIN types t ON p.type_id = t.id
     WHERE LOWER(p.name) LIKE LOWER(?)
       OR LOWER(p.name_en) LIKE LOWER(?)
-      OR LOWER(p.name_de) LIKE LOWER(?)";
+      OR LOWER(p.name_de) LIKE LOWER(?)
+      ORDER BY p.disabled ASC
+      LIMIT 8";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}

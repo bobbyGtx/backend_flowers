@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Запрет прямого доступа к PHP вне /api
+    #RewriteRule ^(?!api/).*\.php$ - [F,L]
+
+    # Если файл или директория существует — отдать напрямую
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Все остальные запросы — в SPA
+    RewriteRule ^ index.html [L]
+</IfModule>

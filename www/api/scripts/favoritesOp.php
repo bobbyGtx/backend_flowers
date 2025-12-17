@@ -15,7 +15,7 @@ function getUserFavorites($link, $result, $userId){
     $emessage = $e->getMessage();
     $result['error']=true; $result['code']=500; $result['message']=$errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;
   }
-  if (mysqli_num_rows($sqlResult)===0){$result['favorites'] = []; goto endFunc;}
+  if (mysqli_num_rows($sqlResult)===0){$result['favoriteList'] = []; goto endFunc;}
 
   $rows = mysqli_fetch_all($sqlResult, MYSQLI_NUM);
   $favoriteList = array_column($rows, 0);// берём первый столбец

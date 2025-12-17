@@ -379,13 +379,8 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
               $messages[] = $result['message']; $result['message']=$oldMessage;
             }else goto endFunc;
           }
-          if ($result['validationError']) {
-            $messages[] = 'E-Mail is incorrect';
-            unset($result['validationError']);
-          } else {
-            $newData['emailVerification']=0;
-            $newData['email'] = $postDataJson['email'];
-          }
+          $newData['emailVerification']=0;
+          $newData['email'] = $postDataJson['email'];
         }else $messages[] = 'E-Mail is incorrect';
       } 
     }
@@ -496,6 +491,148 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
   }
 
   $result['newData'] = $newData;
+  endFunc:
+  return $result;
+}
+
+/*
+ * Функция создает запись в базе данных для определенных операций пользователя:
+ * - changeEmail - изменение email
+ * - verifyEmail - верификация e-mail адреса нового пользователя
+ * - resetPass - сброс пароля
+ * Функция принимает
+ * $userId - идентификатор пользователя
+ * $tokenFieldName - название поля, в которое записывать токен.['changeEmailToken','verifyEmailToken','resetPassToken']
+ * если $tokenFieldName = 'changeEmailToken', то обязателна передача $newEmail
+ * $newEmail должен быть передан в функцию, а его валидность проверяется уже тут
+ *
+ * Выходные параметры
+ * userOpData
+ */
+function createUserOpRecord($result, $link, $userId,UserOpTypes $operationType, $newEmail=null){
+  include_once 'enums.php';
+  include 'variables.php';
+  include_once 'generators.php';
+  $funcName = 'createUserOpRecord_func';
+  settype($userId, 'integer');
+
+  if (empty($result) || $result['error']) goto endFunc;
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (!$userId) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
+
+  if ($operationType === UserOpTypes::changeEmail){
+    if (!$newEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
+    if (!preg_match($emailRegEx, $newEmail)) {$result['error'] = true;$result['code'] = 400;$result['message'] = $authError['emailNotValid'];goto endFunc;}
+  }
+
+  $token = generate_string($operationTokenLength);
+  if (!preg_match($opTokenRegEx, $token)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenInvalid'] . "($funcName)"; goto endFunc;}
+  $createdAt=time();
+
+  $sql = "INSERT INTO user_operations (user_id,newEmail,$operationType->value,createdAt)VALUES (?,?,?,?)";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param("issi", $userId, $newEmail,$token, $createdAt);
+    $stmt->execute();
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['insertReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+
+  $result['data'] = ['userId'=>$userId,'token'=>$token, 'createdAt' => $createdAt];
+  if ($newEmail && $operationType === UserOpTypes::changeEmail)$result['data']['newEmail'] = $newEmail;
+  endFunc:
+  return $result;
+}
+
+function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$reqLanguage=''){
+  include_once 'enums.php';
+  include 'variables.php';
+  if ($result['error']) goto endFunc;
+  if (!$userEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
+  if (!preg_match($emailRegEx, $userEmail)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $authError['emailNotValid'];goto endFunc;}
+  if (!$token){$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenNotFound'];goto endFunc;}
+  if (!preg_match($opTokenRegEx,$token)){$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenInvalid'];goto endFunc;}
+  if (!$createdAt) {$result['error'] = true;$result['code'] = 500;$result['message'] = $error['timeStampNotFound'];goto endFunc;}
+
+  $date = new DateTime("@{$createdAt}");
+  $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+  $createdDate = $date->format("d-m-Y H:i");
+  $logoUrl = $imagesUrl.'logo.png';
+  $confirmUrl = $projectUrl.'/api/confirm?token='.$token;
+  $emailHtmlRu = <<<HTML
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Подтверждение электронной почты</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
+    <tr>
+        <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden;">
+
+                <!-- HEADER -->
+                <tr>
+                    <td align="center" style="padding:30px 20px;">
+                        <img
+                            src="$logoUrl"
+                            alt="Логотип компании"
+                            width="150"
+                            height="90"
+                            style="display:block; border:0;"
+                        >
+                    </td>
+                </tr>
+
+                <!-- CONTENT -->
+                <tr>
+                    <td style="padding:20px 40px; color:#333333; font-size:15px; line-height:1.6;">
+                        <p>Здравствуйте,</p>
+                        <p>
+                            Благодарим вас за регистрацию в нашем магазине.
+                            Для завершения процесса, пожалуйста, подтвердите ваш адрес электронной почты,
+                            нажав на кнопку ниже.
+                        </p>
+
+                        <p style="text-align:center; margin:30px 0;">
+                            <a href="$confirmUrl"
+                                style="
+                                    background-color:#1a73e8;
+                                    color:#ffffff;
+                                    text-decoration:none;
+                                    padding:12px 24px;
+                                    border-radius:4px;
+                                    font-weight:bold;
+                                    display:inline-block;">
+                                Подтвердить email
+                            </a>
+                        </p>
+                        <p>Если вы не запрашивали данное действие, просто проигнорируйте это письмо.</p>
+                        <p style="margin-top:30px;">С уважением,<br><strong>Команда компании</strong></p>
+                    </td>
+                </tr>
+                <!-- FOOTER -->
+                <tr>
+                    <td style="background-color:#f0f2f5; padding:15px 40px; font-size:12px; color:#777777;">
+                        <p style="margin:0;">Это автоматическое сообщение. Пожалуйста, не отвечайте на него.</p>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
+HTML;
+
+  $headers  = "MIME-Version: 1.0\r\n";
+  $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+  $headers .= "From: AmoraFlowers <noreply@mail.amoraflowers.com>\r\n";
+  $userEmail = 'bobbygtx@gmail.com';
+  $success = mail($userEmail, 'Подтверждение email адреса', $emailHtmlRu, $headers);
   endFunc:
   return $result;
 }

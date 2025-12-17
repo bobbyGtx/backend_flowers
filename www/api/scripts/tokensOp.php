@@ -2,7 +2,7 @@
 //Проверка токена на валидность. userData - флаг для возврата идентификатора пользователя и пароля
 function checkToken($link, $result, $http_Headers,$userData = false){
    include 'variables.php';
-   $funcName = 'checkToken'.'_func';
+   $funcName = 'checkToken_func';
    $http_Headers = array_change_key_case($http_Headers, CASE_LOWER);
    $http_AccessToken = isset($http_Headers[$accessTokenHeader])?$http_Headers[$accessTokenHeader]:null;
    if (empty($http_AccessToken) || !preg_match($accessTokenRegEx, $http_AccessToken)) {
@@ -40,7 +40,7 @@ function checkToken($link, $result, $http_Headers,$userData = false){
 
 function generateTokens($link, $result, $userId){
    include 'variables.php';
-   $funcName = 'generateTokens'.'_func';
+   $funcName = 'generateTokens_func';
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
    if (!$userId) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
@@ -73,7 +73,7 @@ function generateTokens($link, $result, $userId){
 
 function checkRefreshToken($link, $result, $refreshToken){
    include 'variables.php';
-   $funcName = 'checkRefreshToken'.'_func';
+   $funcName = 'checkRefreshToken_func';
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
    if (empty($refreshToken) || !preg_match($refreshTokenRegEx, $refreshToken)) {
@@ -122,7 +122,7 @@ function checkRefreshToken($link, $result, $refreshToken){
 
 function clearTokens($link, $result, $userId){
    include 'variables.php';
-   $funcName = 'clearTokens'.'_func';
+   $funcName = 'clearTokens_func';
    if (empty($result) || $result['error']){goto endFunc;}
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
    if (!$userId) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}

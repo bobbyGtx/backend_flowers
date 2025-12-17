@@ -172,7 +172,7 @@ function compileOrderData($incOrder, $selectedDelivery, $address, $productsData,
   $order['paymentType_id'] = $incOrder['paymentTypeId'];
   $order['phone'] = $incOrder['phone'];
   $order['email'] = $incOrder['email'];
-  $order['comment'] = $incOrder['comment'];
+  $order['comment'] = isset($incOrder['comment'])?$incOrder['comment']:null;
   $order['status_id'] = $startOrderStatus;
   $order['items'] = $productsData['products'];//товары. для БД нужно кодировать json_encode($orderProducts,JSON_UNESCAPED_UNICODE)
   $order['user_id'] = intval($userId);
@@ -252,7 +252,7 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
   $sql = "SELECT 
     orders.*,
     delivery_types.deliveryType$languageTag as deliveryType,delivery_types.addressNeed,
-    payment_types.paymentType$languageTag as paymentType,statuses.statusName$languageTag as statusName
+    payment_types.paymentType$languageTag as paymentType,statuses.statusName$languageTag as statusName,statuses.class
     FROM orders 
     LEFT OUTER JOIN statuses ON orders.status_id = statuses.id 
     LEFT OUTER JOIN delivery_types ON orders.deliveryType_id = delivery_types.id
@@ -287,6 +287,7 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
   $order['comment'] = $row['comment'];
   $order['status_id'] = $row['status_id'];
   $order['statusName'] = $row['statusName'];
+  $order['class'] = $row['class'];
   $order['items'] = json_decode($row['items']);
 
   if (!empty($row['createdAt'])){
@@ -352,6 +353,73 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
     "totalAmount": 76
 }*/
 }//получение информации о заказах
+
+function getOrders($link, $result, $userId, $reqLanguage) {
+  include 'scripts/variables.php';
+  $funcName = 'getOrders_func';
+  if (empty($result) || $result['error']) {goto endFunc;}
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (!$userId) {$result['error'] = true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
+
+  $sql = "SELECT 
+    o.id,
+    o.deliveryCost,
+    o.deliveryType_id, dt.deliveryType$reqLanguage as deliveryType,
+    o.delivery_info,
+    o.firstName, 
+    o.lastName,
+    o.phone,
+    o.email,
+    o.paymentType_id, pt.paymentType$reqLanguage as paymentType,
+    o.comment,
+    o.status_id, s.statusName$reqLanguage as statusName, s.class,
+    o.items,
+    o.totalAmount,
+    o.createdAt,
+    o.updatedAt
+    FROM orders o
+    INNER JOIN delivery_types dt ON o.deliveryType_id = dt.id
+    INNER JOIN payment_types pt ON o.paymentType_id = pt.id
+    INNER JOIN statuses s ON o.status_id = s.id
+    WHERE `user_id` = ?
+    ORDER BY o.id DESC";
+
+    try{
+      $stmt = $link->prepare($sql);
+      if (!$stmt) {throw new Exception($link->error);}
+      $stmt->bind_param("i", $userId);
+      $stmt->execute(); 
+      $response = $stmt->get_result();
+      $stmt->close();
+    }catch(Exception $e){$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+    $orders=[];
+    if ($response->num_rows==0){
+      $result['orders'] = $orders;
+      goto endFunc;
+    }
+    
+    $orders = $response->fetch_all(MYSQLI_ASSOC);
+    foreach ($orders as &$order) {
+      !empty($order['delivery_info']) ? $order['delivery_info'] = json_decode($order['delivery_info']) : NULL;
+      if (!empty($order['createdAt'])){
+        $date = new DateTime("@{$order['createdAt']}");
+        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+        $order['createdAt'] = $date->format("d.m.Y H:i");
+      }
+      if (!empty($order['updatedAt'])){
+        $date = new DateTime("@{$order['updatedAt']}");
+        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+        $order['updatedAt'] = $date->format("d.m.Y H:i");
+      }
+
+      $order['items'] = json_decode($order['items']);
+    }
+    
+    $result['orders'] = $orders;
+
+  endFunc:
+  return $result;
+}
 
 function prepareOrderData($link, $result, $reqLanguage, $postDataJson){
   include 'scripts/variables.php';
@@ -457,70 +525,3 @@ function prepareOrderData($link, $result, $reqLanguage, $postDataJson){
   //error 406: unacceptable format
 
 }//Проверка входящих данных и подготовка
-
-function getOrders($link, $result, $userId, $reqLanguage)
-{
-  include 'scripts/variables.php';
-  $funcName = 'getOrders_func';
-  if (empty($result) || $result['error']) {goto endFunc;}
-  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
-  if (!$userId) {$result['error'] = true; $result['code']=500; $result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
-
-  $sql = "SELECT 
-    o.id,
-    o.deliveryCost,
-    o.deliveryType_id, dt.deliveryType$reqLanguage as deliveryType,
-    o.delivery_info,
-    o.firstName, 
-    o.lastName,
-    o.phone,
-    o.email,
-    o.paymentType_id, pt.paymentType$reqLanguage as paymentType,
-    o.comment,
-    o.status_id, s.statusName$reqLanguage as statusName,
-    o.items,
-    o.totalAmount,
-    o.createdAt,
-    o.updatedAt
-    FROM orders o
-    INNER JOIN delivery_types dt ON o.deliveryType_id = dt.id
-    INNER JOIN payment_types pt ON o.paymentType_id = pt.id
-    INNER JOIN statuses s ON o.status_id = s.id
-    WHERE `user_id` = ?";
-
-    try{
-      $stmt = $link->prepare($sql);
-      if (!$stmt) {throw new Exception($link->error);}
-      $stmt->bind_param("i", $userId);
-      $stmt->execute(); 
-      $response = $stmt->get_result();
-      $stmt->close();
-    }catch(Exception $e){$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
-    $orders=[];
-    if ($response->num_rows==0){
-      $result['orders'] = $orders;
-      goto endFunc;
-    }
-    
-    $orders = $response->fetch_all(MYSQLI_ASSOC);
-    foreach ($orders as &$order) {
-      !empty($order['delivery_info']) ? $order['delivery_info'] = json_decode($order['delivery_info']) : NULL;
-      if (!empty($order['createdAt'])){
-        $date = new DateTime("@{$order['createdAt']}");
-        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-        $order['createdAt'] = $date->format("d-m-Y H:i:s");
-      }
-      if (!empty($order['updatedAt'])){
-        $date = new DateTime("@{$order['updatedAt']}");
-        $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-        $order['updatedAt'] = $date->format("d-m-Y H:i:s");
-      }
-
-      $order['items'] = json_decode($order['items']);
-    }
-    
-    $result['orders'] = $orders;
-
-  endFunc:
-  return $result;
-}

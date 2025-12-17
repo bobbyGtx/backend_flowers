@@ -16,7 +16,6 @@ if ($method === 'OPTIONS') {
   return;
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
-  $reqName = 'statuses [GET]';
 
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
 
@@ -25,7 +24,7 @@ if ($method === 'OPTIONS') {
     $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . "($reqName)" . $db_connect_response['message']; goto endRequest;
   }
 
-  $sql= "SELECT `id`,`statusName$reqLanguage` FROM `statuses`;";
+  $sql= "SELECT `id`,`statusName$reqLanguage`,`class` FROM `statuses`;";
   try{
     $sqlResult = mysqli_query($link, $sql);
   } catch (Exception $e){
@@ -35,7 +34,7 @@ if ($method === 'OPTIONS') {
   
   $numRows = mysqli_num_rows($sqlResult);
   if ($numRows === 0) {
-    $result['error']=true; $result['code'] = 400; $result['message'] = $dbError['recordsNotFound'] . " ($reqName)"; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['recordsNotFound']; goto endRequest;
   }
   $result['statuses'] = mysqli_fetch_all($sqlResult, MYSQLI_ASSOC);//Парсинг
 } else {
