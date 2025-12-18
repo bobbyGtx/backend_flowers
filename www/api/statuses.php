@@ -21,7 +21,7 @@ if ($method === 'OPTIONS') {
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
   if ($db_connect_response['error'] == true || !$link) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . "($reqName)" . $db_connect_response['message']; goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $dbError['connectionError'] . $db_connect_response['message']; goto endRequest;
   }
 
   $sql= "SELECT `id`,`statusName$reqLanguage`,`class` FROM `statuses`;";

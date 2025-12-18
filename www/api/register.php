@@ -6,8 +6,8 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
-include_once 'scripts/variables.php';//файл с генераторами строк
-include 'scripts/languageOp.php';
+include 'scripts/variables.php';//файл с генераторами строк
+include_once 'scripts/languageOp.php';
 include_once 'scripts/enums.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
@@ -15,9 +15,9 @@ if ('OPTIONS' === $method) {
   http_response_code(200);return;
 } elseif ('POST' === $method) {
   include_once 'scripts/generators.php';//файл с генераторами строк
-  include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
-  include 'scripts/userOp.php';//Проверка email и т.д.
-  include 'scripts/cartOp.php';//работа с корзиной товаров
+  include_once 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
+  include_once  'scripts/userOp.php';//Проверка email и т.д.
+  include_once 'scripts/cartOp.php';//работа с корзиной товаров
 
   $result = ['error' => false, 'code' => 200, 'message' => 'User registered!'];//Создание массива с ответом Ок
 
@@ -25,13 +25,6 @@ if ('OPTIONS' === $method) {
   if ($db_connect_response['error'] == true || !$link) {
     $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
   }
-
-  $settings = getSettings($link);//Получение ключа шифрования. 
-  if ($settings == false) {
-    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endRequest;
-  }
-
-  $key = $settings['secretKey'];//ключ шифрования паролей
 
   $postData = file_get_contents('php://input');//получение запроса
   $postDataJson = json_decode($postData, true);//парсинг параметров запроса
@@ -61,30 +54,16 @@ if ('OPTIONS' === $method) {
     }
   }
   
-  $passwordPostEnc = __encode($passwordPost, $key);//шифрование пароля
-  
   $result = checkEmail($link,$result,$emailPost,false);//проверка уникальности почты
   if ($result['error']) goto endRequest;
-//добавление пользователя
-  $sql="INSERT INTO `$userTableName`(`email`, `password`, `updatedAt`) VALUES (?,?,?)";
-  $timeStamp=time();
-  try{
-    mysqli_report(MYSQLI_REPORT_ALL);
-    $stmt = mysqli_prepare($link, $sql);
-    mysqli_stmt_bind_param($stmt, 'ssi',$emailPost,$passwordPostEnc,$timeStamp);
-    mysqli_stmt_execute($stmt);
-    $newUserId = mysqli_insert_id($link);
-    mysqli_stmt_close($stmt);
-  } catch (Exception $e){
-    $emessage = $e->getMessage();
-    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($emessage))";goto endRequest;
-  }
+  //добавление пользователя
+  $result = addUser($result, $link,$emailPost,$passwordPost);
+  if ($result['error']) goto endRequest;
+  $newUserId = $result['newUserId']; unset($result['newUserId']);
 
-  if (empty($newUserId) && $newUserId<1){
-    $result['error']=true; $result['code']=500; $result['message']="Problem with UserID. Creating Cart record in DB impossible. ($emessage))";goto endRequest;
-  }
   //Создание записи для верификации email
   $operationType = UserOpTypes::verifyEmail;
+
   $result = createUserOpRecord($result,$link,$newUserId,$operationType);
   if ($result['error']) goto endRequest;
   $verifyEmailData = $result['data']; unset($result['data']);

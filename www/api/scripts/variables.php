@@ -1,6 +1,9 @@
 <?php
-$productionMode = true;//верификация e-mail не обязательно в true
-$settingsFile = "../../DBSettings/dbData.json";//путь из папки scripts
+$productionMode = false;//верификация e-mail не обязательно в true
+$projectDir = dirname(__DIR__,2);
+$settingsFile = $projectDir."/../DBSettings/dbData.json";//путь из папки scripts
+$templatesDir = $projectDir."/api/templates/";//путь из папки scripts
+$emailTemplatesDir = $projectDir."/api/templates/emails/";//путь из папки scripts
 $projectUrl = $productionMode?"http://amoraflowers.com.xsph.ru":"http://project.com";
 $imagesUrl = $projectUrl."/assets/";
 //переменные для работы с токенами
@@ -14,7 +17,7 @@ $accTokenLenght = 100;
 $refrTokenLenght = 120;
 $accTokenLife = 600000;
 $refrTokenLife = 2629743;
-$operationTokenLength = 125;//токены для сброса пароля, верификации E-Mail и смены E-Mail
+$operationTokenLength = 200;//токены для сброса пароля, верификации E-Mail и смены E-Mail
 $verifyEmailTokenLife = 0;//Время жизни токена, подтверждающего Email при регистрации. 0 = бессрочно
 $changeEmailTokenLife = 7200;//Время жизни токена, подтверждающего новый Email при смене почты
 $resetPasswordTokenLife = 7200;//Время жизни токена для сброса пароля
@@ -114,10 +117,11 @@ $authError['accTokenNotFound'] = 'Access token not found or has not valid format
 $authError['refrTokenNotFound'] = 'Refresh token not found or has not valid format!';//401
 $authError['accTokenInvalid'] = 'Access token invalid!';//401
 $authError['accTokenOutOfDate'] = 'Access token out of date!';//401
-$error['opTokenInvalid'] = 'Operation token invalid!';//500, 400
-$error['opTokenNotFound'] = 'Operation token not found!';//500
-$error['opTokenOutOfDate'] = 'Operation token out of date!';//400
-$error['timeStampNotFound'] = 'Timestamp not found';//500
+$opErrors['opTokenInvalid'] = 'Operation token invalid!';//500, 400
+$opErrors['opTokenNotFound'] = 'Operation token not found!';//500
+$opErrors['opTokenOutOfDate'] = 'Operation token out of date!';//400
+$opErrors['timeStampNotFound'] = 'Timestamp not found';//500
+$opErrors['EmailTemplateNotFound'] = 'Email template not found';//500
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';

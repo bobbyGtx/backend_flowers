@@ -3,6 +3,7 @@
 include 'crypt.php';
 include 'variables.php';
 function dbConnect(){
+  global $settingsFile;
   include 'variables.php';
   $result = ['error' => false, 'message' => 'Connected!', 'link' => null];
   $dbSettings = file_get_contents($settingsFile);//Чтение файла в переменную
@@ -17,7 +18,7 @@ function dbConnect(){
   } else {
     $result = ['error' => true, 'message' => 'Error opening file with settings!', 'link' => null];
   }
-  if ($result['error'] == false && $link) {
+  if (!$result['error'] && !empty($link)) {
     mysqli_set_charset($link, "utf8mb4");//Кодировка БД
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);// Включаем генерацию ошибок для нормальной работы try catch
     $result['link'] = $link;

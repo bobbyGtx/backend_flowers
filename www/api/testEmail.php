@@ -33,3 +33,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" || $_SERVER["REQUEST_METHOD"] == "GET")
   echo
   "Данный метод запроса не поддерживается сервером!";
 }
+
+/*
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+require 'vendor/autoload.php'; // автозагрузка composer
+
+function sendMail(string $to, string $subject, string $htmlContent): array {
+  $result = ['error' => false];
+
+  $mail = new PHPMailer(true);
+
+  try {
+    // Без SMTP — используется стандартная mail()
+    $mail->isMail();
+
+    // Если хотите использовать SMTP в будущем, можно раскомментировать
+    //$mail->isSMTP();
+    //$mail->Host       = 'smtp.example.com';
+    //$mail->SMTPAuth   = true;
+    //$mail->Username   = 'username@example.com'; // логин
+    //mail->Password   = 'password';             // пароль
+    //$mail->SMTPSecure = 'tls';                  // или 'ssl'
+    //$mail->Port       = 587;
+
+    // От кого
+    $mail->setFrom('no-reply@example.com', 'Your Site');
+    // Кому
+    $mail->addAddress($to);
+
+    // Содержимое письма
+    $mail->isHTML(true);
+    $mail->Subject = $subject;
+    $mail->Body    = $htmlContent;
+    $mail->AltBody = strip_tags($htmlContent);
+
+    // Отправка
+    $mail->send();
+  } catch (Exception $e) {
+    $result['error'] = true;
+    $result['code'] = 500;
+    $result['message'] = "E-Mail was not sent. Mailer Error: {$mail->ErrorInfo}";
+  }
+
+  return $result;
+}
+Использование:
+
+php
+Копировать код
+$result = sendMail($userEmail, 'Подтверждение email адреса', $emailHtml);
+
+if ($result['error']) {
+  goto endFunc;
+}
+*/

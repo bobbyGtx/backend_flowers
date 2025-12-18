@@ -37,6 +37,45 @@ function checkEmail($link, $result, $email, $checkRegex = true) {
   return $result;
 }
 
+function addUser($result, $link, $email, $password) {
+  global $errors, $userTableName;
+  include_once 'crypt.php';
+  $funcName = 'addUser_func';
+  if (empty($result) || $result['error'])goto endFunc;
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (empty($email)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
+
+  $settings = getSettings($link);//Получение ключа шифрования.
+  if (!$settings) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endFunc;}
+  $key = $settings['secretKey'];//ключ шифрования паролей
+
+  $passwordEnc = __encode($password, $key);//шифрование пароля
+
+  $sql="INSERT INTO `$userTableName`(`email`, `password`, `updatedAt`) VALUES (?,?,?)";
+
+  $passwordEnc = __encode($password, $key);//шифрование пароля
+  $timeStamp=time();
+  try{
+    mysqli_report(MYSQLI_REPORT_ALL);
+    $stmt = mysqli_prepare($link, $sql);
+    mysqli_stmt_bind_param($stmt, 'ssi',$email,$passwordEnc,$timeStamp);
+    mysqli_stmt_execute($stmt);
+    $newUserId = mysqli_insert_id($link);
+    mysqli_stmt_close($stmt);
+  } catch (Exception $e){
+    $emessage = $e->getMessage();
+    $result['error']=true; $result['code']=500; $result['message']=$errors['insertReqRejected'] . "($emessage))";goto endFunc;
+  }
+
+  if (empty($newUserId) && $newUserId<1){
+    $result['error']=true; $result['code']=500; $result['message']="Problem with UserID. Creating Cart record in DB impossible.";goto endFunc;
+  }
+  $result['newUserId'] = $newUserId;
+
+  endFunc:
+  return $result;
+}
+
 function getUserInfo($link, $result, $userId) {
   include 'variables.php';
   $funcName = 'getUserInfo' . '_func';
@@ -509,10 +548,11 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
  * Выходные параметры
  * userOpData
  */
-function createUserOpRecord($result, $link, $userId,UserOpTypes $operationType, $newEmail=null){
-  include_once 'enums.php';
-  include 'variables.php';
+function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationType, $newEmail=null){
+  global $errors, $authError, $opErrors, $emailRegEx, $operationTokenLength, $opTokenRegEx;
+  include_once 'variables.php';
   include_once 'generators.php';
+  include_once 'enums.php';
   $funcName = 'createUserOpRecord_func';
   settype($userId, 'integer');
 
@@ -526,10 +566,13 @@ function createUserOpRecord($result, $link, $userId,UserOpTypes $operationType, 
   }
 
   $token = generate_string($operationTokenLength);
-  if (!preg_match($opTokenRegEx, $token)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenInvalid'] . "($funcName)"; goto endFunc;}
+  if (!preg_match($opTokenRegEx, $token)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenInvalid'] . "($funcName)"; goto endFunc;}
   $createdAt=time();
 
-  $sql = "INSERT INTO user_operations (user_id,newEmail,$operationType->value,createdAt)VALUES (?,?,?,?)";
+  $tokenField = $operationType->tokenField();
+  $timeField = $operationType->timeField();
+
+  $sql = "INSERT INTO user_operations (user_id,newEmail,$tokenField,$timeField)VALUES (?,?,?,?)";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -545,94 +588,46 @@ function createUserOpRecord($result, $link, $userId,UserOpTypes $operationType, 
 }
 
 function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$reqLanguage=''){
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode;
   include_once 'enums.php';
-  include 'variables.php';
+  $funcName = 'sendRegisterVerificationEmail_func';
   if ($result['error']) goto endFunc;
   if (!$userEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
-  if (!preg_match($emailRegEx, $userEmail)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $authError['emailNotValid'];goto endFunc;}
-  if (!$token){$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenNotFound'];goto endFunc;}
-  if (!preg_match($opTokenRegEx,$token)){$result['error'] = true;$result['code'] = 500;$result['message'] = $error['opTokenInvalid'];goto endFunc;}
-  if (!$createdAt) {$result['error'] = true;$result['code'] = 500;$result['message'] = $error['timeStampNotFound'];goto endFunc;}
+  if (!preg_match($emailRegEx, $userEmail)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $authError['emailNotValid'] . "($funcName)";goto endFunc;}
+  if (!$token){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenNotFound'] . "($funcName)";goto endFunc;}
+  if (!preg_match($opTokenRegEx,$token)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenInvalid'] . "($funcName)";goto endFunc;}
+  if (!$createdAt) {$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['timeStampNotFound'] . "($funcName)";goto endFunc;}
 
+  $urlParamName = UserOpTypes::verifyEmail->urlParam();
   $date = new DateTime("@{$createdAt}");
   $date->setTimezone(new DateTimeZone('Europe/Berlin'));
   $createdDate = $date->format("d-m-Y H:i");
   $logoUrl = $imagesUrl.'logo.png';
-  $confirmUrl = $projectUrl.'/api/confirm?token='.$token;
-  $emailHtmlRu = <<<HTML
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Подтверждение электронной почты</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
-
-<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
-    <tr>
-        <td align="center">
-            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden;">
-
-                <!-- HEADER -->
-                <tr>
-                    <td align="center" style="padding:30px 20px;">
-                        <img
-                            src="$logoUrl"
-                            alt="Логотип компании"
-                            width="150"
-                            height="90"
-                            style="display:block; border:0;"
-                        >
-                    </td>
-                </tr>
-
-                <!-- CONTENT -->
-                <tr>
-                    <td style="padding:20px 40px; color:#333333; font-size:15px; line-height:1.6;">
-                        <p>Здравствуйте,</p>
-                        <p>
-                            Благодарим вас за регистрацию в нашем магазине.
-                            Для завершения процесса, пожалуйста, подтвердите ваш адрес электронной почты,
-                            нажав на кнопку ниже.
-                        </p>
-
-                        <p style="text-align:center; margin:30px 0;">
-                            <a href="$confirmUrl"
-                                style="
-                                    background-color:#1a73e8;
-                                    color:#ffffff;
-                                    text-decoration:none;
-                                    padding:12px 24px;
-                                    border-radius:4px;
-                                    font-weight:bold;
-                                    display:inline-block;">
-                                Подтвердить email
-                            </a>
-                        </p>
-                        <p>Если вы не запрашивали данное действие, просто проигнорируйте это письмо.</p>
-                        <p style="margin-top:30px;">С уважением,<br><strong>Команда компании</strong></p>
-                    </td>
-                </tr>
-                <!-- FOOTER -->
-                <tr>
-                    <td style="background-color:#f0f2f5; padding:15px 40px; font-size:12px; color:#777777;">
-                        <p style="margin:0;">Это автоматическое сообщение. Пожалуйста, не отвечайте на него.</p>
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
-</table>
-
-</body>
-</html>
-HTML;
+  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}";
+  //Получение шаблона из файла
+  $templateFile = "{$emailTemplatesDir}".UserOpTypes::verifyEmail->emailTemplate()."{$reqLanguage}.php";
+  if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}
+  ob_start();
+  include $templateFile;
+  $emailHtml = ob_get_clean();
+  $mailSubject = match ($reqLanguage) {
+    '_en' => '[AmoraFlowers] Email address confirmation',
+    '_de' => '[AmoraFlowers] Подтверждение email адреса',
+    default => '[AmoraFlowers] E-Mail-Adressbestätigung',
+  };
 
   $headers  = "MIME-Version: 1.0\r\n";
   $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
   $headers .= "From: AmoraFlowers <noreply@mail.amoraflowers.com>\r\n";
-  $userEmail = 'bobbygtx@gmail.com';
-  $success = mail($userEmail, 'Подтверждение email адреса', $emailHtmlRu, $headers);
+  if (!$productionMode)$result['mailLink'] = $confirmUrl;
+  else{
+    $success = mail($userEmail, $mailSubject, $emailHtml, $headers);
+    if (!$success) {
+      $result['error'] = true;$result['code'] = 500;$result['message'] = "E-Mail was not sent. ({$funcName})";goto endFunc;
+    }
+  }
+
   endFunc:
   return $result;
-}
+}//Чистить перед продакшеном if (!$productionMode)$result['mailLink'] = $confirmUrl;
+
