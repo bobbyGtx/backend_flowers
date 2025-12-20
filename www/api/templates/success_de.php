@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html lang="de">
-    <head>
-        <meta charset="UTF-8">
-        <title><?= htmlspecialchars($title ?? 'OK') ?></title>
-    </head>
-    <body>
-        <h1><?= htmlspecialchars($message ?? 'Success!') ?></h1>
-        <p>Sie können dieses Fenster schließen und zur Webseite des Online-Shops wechseln.</p>
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <title>Die Operation wurde bestätigt.</title>
+    <link rel="stylesheet" href="./templates/styles/success.css">
+</head>
+<body>
+<div class="container">
+    <h1><?= htmlspecialchars($message ?? 'Success!') ?></h1>
+  <?php if (!empty($link)): ?>
+      <p>Über <a href="<?= htmlspecialchars($link) ?>">den Link</a> gelangen Sie zum Online-Shop.</p>
+  <?php endif; ?>
+</div>
+</body>
 </html>

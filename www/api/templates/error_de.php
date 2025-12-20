@@ -2,10 +2,15 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($title ?? 'Fehler') ?></title>
+    <title>Anfragefehler</title>
+    <link rel="stylesheet" href="./templates/styles/error.css">
 </head>
 <body>
-<h1><?= htmlspecialchars($message ?? 'Fehler ohne Text') ?></h1>
-<p>Fehlercode: <?= htmlspecialchars($code ?? 'N/A') ?></p>
+<div class="container">
+<h1><?= htmlspecialchars($message ?? 'Der Link ist ungültig!') ?></h1>
+<?php if (isset($code)): ?>
+    <p>Fehlercode: <?= htmlspecialchars($code) ?></p>
+<?php endif; ?>
+</div>
 </body>
 </html>

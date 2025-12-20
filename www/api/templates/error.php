@@ -2,10 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title><?= htmlspecialchars($title ?? 'Ошибка') ?></title>
+    <title>Ошибка запроса</title>
+    <link rel="stylesheet" href="./templates/styles/error.css">
 </head>
 <body>
-<h1><?= htmlspecialchars($message ?? 'Ошибка без текста') ?></h1>
-<p>Код ошибки: <?= htmlspecialchars($code ?? 'N/A') ?></p>
+<div class="container">
+<h1><?= htmlspecialchars($message ?? 'Ссылка не действительна!') ?></h1>
+<?php if (isset($code)): ?>
+    <p>Код ошибки: <?= htmlspecialchars($code) ?></p>
+<?php endif; ?>
+</div>
 </body>
 </html>

@@ -1,5 +1,6 @@
 <?php
 $productionMode = false;//верификация e-mail не обязательно в true
+$frontendAddress = 'http://amoraflowers.com.xsph.ru';
 $projectDir = dirname(__DIR__,2);
 $settingsFile = $projectDir."/../DBSettings/dbData.json";//путь из папки scripts
 $templatesDir = $projectDir."/api/templates/";//путь из папки scripts
@@ -17,10 +18,7 @@ $accTokenLenght = 100;
 $refrTokenLenght = 120;
 $accTokenLife = 600000;
 $refrTokenLife = 2629743;
-$operationTokenLength = 200;//токены для сброса пароля, верификации E-Mail и смены E-Mail
-$verifyEmailTokenLife = 0;//Время жизни токена, подтверждающего Email при регистрации. 0 = бессрочно
-$changeEmailTokenLife = 7200;//Время жизни токена, подтверждающего новый Email при смене почты
-$resetPasswordTokenLife = 7200;//Время жизни токена для сброса пароля
+$operationTokenLength = 200;//токены для сброса пароля, верификации E-Mail и смены E-Mail. Время жизни в UserOpTypes ENUM
 
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
@@ -45,7 +43,6 @@ $regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamb
 $noFotoFileName = 'no-image.jpg';//название файла заглушки картинки
 $photoDir = '../assets/';//Директория с фото. Обязательно с точки
 
-
 $errors['dbConnect'] = 'DB connection Error! ';//Ошибка соединения с БД
 $errors['dbConnectInterrupt'] = 'Connection with DB interrupt. ';//Ошибка соединения с БД
 $errors['dbrequestSettings'] = 'Error while requesting settings from DB. ';
@@ -53,6 +50,7 @@ $errors['reqRejected']='Request rejected by database. ';
 $errors['selReqRejected']='Request (SELECT) rejected by database. ';
 $errors['insertReqRejected']='Request (INSERT) rejected by database. ';
 $errors['updReqRejected']='Request (UPDATE) rejected by database. ';
+$errors['updReqNothing']='Request (UPDATE) did not change anything.';//DumpError
 $errors['delReqRejected']='Request (DELETE) rejected by database. ';
 $errors['recognizeUnableDB'] = 'Unable to recognize data from database! ';
 $errors['deliveryIdNotFound'] ='Delivery identifier not found!';//400, 406
@@ -91,7 +89,8 @@ $dataErr['dataInFunc'] = 'Error in data passed to the function!';
 $dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized!';
 
 $critErr['userDNotFound'] ='Critical error! User data not found in record.';
-$critErr['userIdNotFound'] ='Critical error! User ID not found in record.';
+$critErr['userIdNotFound'] ='Critical error! User ID not found in record.';//500
+$critErr['recordIdNotFound'] ='Critical error! Record ID not found.';//500
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';//400
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now!';

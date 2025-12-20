@@ -35,5 +35,12 @@ enum UserOpTypes: string {
       self::resetPass => 'resetPass',
     };
   }
+  public function tokenLifeTime(): int {
+    return match ($this) {
+      self::verifyEmail => 0,
+      self::changeEmail => 86400,
+      self::resetPass => 21600,
+    };
+  }//Время жизни токенов в секундах. 0 - бессрочно
 
 }
