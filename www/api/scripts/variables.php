@@ -127,3 +127,4 @@ $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';
 $infoMessages['userBlocked'] = 'User blocked!';//403
+$infoMessages['linkNotvalid'] = 'Link is not valid!';//400

@@ -1,6 +1,6 @@
 <?php
 function checkConfirmationToken($result,mysqli $link, string $token, UserOpTypes $operation){
-  global $errors, $opTokenRegEx, $dbError, $opErrors, $critErr;
+  global $errors, $opTokenRegEx, $dbError, $opErrors, $infoMessages;
   include_once 'enums.php';
   include_once 'variables.php';
   $funcName = 'checkConfirmationToken_func';
@@ -29,11 +29,10 @@ function checkConfirmationToken($result,mysqli $link, string $token, UserOpTypes
     $numRows = $response->num_rows;
     $stmt->close();
   } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
-  if ($numRows===0){$result['error']=true;$result['code']=400;$result['message']=$dbError['unexpResponse'] . "($funcName)";goto endFunc;}
+  if ($numRows===0){$result['error']=true;$result['code']=400;$result['message']=$infoMessages['linkNotvalid'];goto endFunc;}
   $row = $response->fetch_assoc();
 
   if (!isset($row[$idFieldName]) || !isset($row[$user_IdFieldName]) || ($operation===UserOpTypes::changeEmail && !isset($row[$newEmailFieldName]))){
-
     $result['error']=true; $result['code']=500; $result['message'] = $dbError['unexpResponse'];goto endFunc;
   }
 

@@ -603,7 +603,7 @@ function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$r
   $date->setTimezone(new DateTimeZone('Europe/Berlin'));
   $createdDate = $date->format("d-m-Y H:i");
   $logoUrl = $imagesUrl.'logo.png';
-  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}";
+  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$reqLanguage}";
   //Получение шаблона из файла
   $templateFile = "{$emailTemplatesDir}".UserOpTypes::verifyEmail->emailTemplate()."{$reqLanguage}.php";
   if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}

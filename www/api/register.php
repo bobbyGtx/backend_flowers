@@ -68,7 +68,7 @@ if ('OPTIONS' === $method) {
   if ($result['error']) goto endRequest;
   $verifyEmailData = $result['data']; unset($result['data']);
 
-  $result = sendRegisterVerificationEmail($result,$emailPost,$verifyEmailData['token'],$verifyEmailData['createdAt']);
+  $result = sendRegisterVerificationEmail($result,$emailPost,$verifyEmailData['token'],$verifyEmailData['createdAt'],$reqLanguage);
   if ($result['error']) goto endRequest;
   //Запись в таблице с корзиной создается при первом запросе корзины или при rebaseCart(post)
 }else {

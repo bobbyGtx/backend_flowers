@@ -2,7 +2,9 @@
 header("Content-Type: text/html; charset=utf-8");
 
 $method = $_SERVER['REQUEST_METHOD'];
-include 'scripts/variables.php';
+include_once 'scripts/variables.php';
+include_once 'scripts/languageOp.php';
+$reqLanguage = languageDetection($_GET);//Определение запрашиваемого языка и возврат приставки
 
 function render(string $template, array $vars = []): string {
   extract($vars, EXTR_SKIP);
@@ -20,11 +22,20 @@ if ($method === 'GET') {
 
   if (isset($_GET['vToken'])) {
     $token = $_GET['vToken'];
-    $result['message'] = 'Адрес электронной почты подтвержден';
+    $result['message'] = match ($reqLanguage) {
+      '_en' => 'Email address confirmed!',
+      '_de' => 'E-Mail-Adresse wurde bestätigt!',
+      default => 'Адрес электронной почты подтвержден!',
+    };
     $operation = UserOpTypes::verifyEmail;
   }elseif(isset($_GET['eToken'])){
     $token = $_GET['eToken'];
-    $result['message'] = 'Новый адрес электронной почты подтвержден';
+
+    $result['message'] = match ($reqLanguage) {
+      '_en' => 'New email address confirmed!',
+      '_de' => 'Neue E-Mail-Adresse wurde bestätigt!',
+      default => 'Новый адрес электронной почты подтвержден!',
+    };
     $operation = UserOpTypes::changeEmail;
   }else{
     $result['error']=true; $result['code'] = 400;$result['message'] = 'Confirmation token not found!'; goto endRequest;
@@ -64,12 +75,12 @@ $code = $result['code'];
 http_response_code($code);
 
 if ($result['error']) {
- $page = render("{$templatesDir}/error.php", [
+ $page = render("{$templatesDir}/error{$reqLanguage}.php", [
     'message' => $productionMode && $code<>403?null:$message,
     'code' => $productionMode?null:$result['code'],
   ]);
 }else{
-  $page = render("{$templatesDir}/success.php", [
+  $page = render("{$templatesDir}/success{$reqLanguage}.php", [
     'message' => $message,
     'link' => $frontendAddress,
   ]);
