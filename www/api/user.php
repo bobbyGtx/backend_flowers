@@ -19,6 +19,7 @@ if ($method === 'OPTIONS') {
   //Если поле есть, то оно было изменено. Если поле пустое, то его нужно обнулить. Если поля нет, ничего делать не нужно
   include 'scripts/connectDB.php';//Подключение к БД + модуль шифрования + настройки
   include 'scripts/paymentOp.php'; 
+  include_once 'scripts/enums.php';
 
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['recordChanged']];//Создание массива с ответом Ок
 
@@ -34,6 +35,7 @@ if ($method === 'OPTIONS') {
   $result = checkToken($link, $result, getallheaders(),true);
   if ($result['error']) goto endRequest;
   if ($result['userId'] && $result['userPassword'] && $result['userEmail']) {$userId = $result['userId'];$userPwd = $result['userPassword'];$userEml = $result['userEmail'];unset($result['userId'],$result['userPassword'],$result['userEmail']); }
+  else{$result['error'] = true; $result['code'] = 500; $result['message'] = $errors['unexpectedFuncResult']; goto endRequest;}
 
   /*Пример данных'{
         "firstName": "Gregor",
@@ -62,11 +64,25 @@ if ($method === 'OPTIONS') {
 //============= Обработка полученных данных и формирование изменений =============
   $result = prepareNewData($result,$link, $postDataJson,$userEml,$userPwd,$key);
   if ($result['error']) goto endRequest;
-  $newData = $result['newData'];//unset($result['newData']);
+  $newData = $result['newData'];unset($result['newData']);
+
+  //============= Обработка изменения email ========================
+  if (isset($newData['email'])) {
+    $newEmail=$newData['email'];unset($newData['email']);
+    $operationType = UserOpTypes::changeEmail;
+    $result = createUserOpRecord($result,$link,$userId,$operationType,$newEmail);
+    if ($result['error']) goto endRequest;
+    ['token'=>$token,'createdAt'=>$createdAt,'newEmail'=>$newEmail]=$result['data']; unset($result['data']);
+
+    $result = sendChangeEmailConfirmation($result,$newEmail,$token,$createdAt,$reqLanguage);
+    if ($result['error']) goto endRequest;
+  }//Если тебуется изменение email - обрабатываем отправку почты для подтверждения
 
   //============= Запрос в БД для применения изменений =============
-  $result = updateUserData($link, $result, $userId, $newData);
-  if ($result['error']) goto endRequest;
+  if (count($newData)>0){
+    $result = updateUserData($link, $result, $userId, $newData);
+    if ($result['error']) goto endRequest;
+  }
     
   //$result['debug'] = $result;
   //============= Запрос в БД для получения измененной записи =============

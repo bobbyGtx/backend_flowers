@@ -32,9 +32,9 @@ if ($method === 'GET') {
     $token = $_GET['eToken'];
 
     $result['message'] = match ($reqLanguage) {
-      '_en' => 'New email address confirmed!',
-      '_de' => 'Neue E-Mail-Adresse wurde bestätigt!',
-      default => 'Новый адрес электронной почты подтвержден!',
+      '_en' => 'Email address successfully changed!',
+      '_de' => 'E-Mail-Adresse wurde erfolgreich geändert!',
+      default => 'Адрес электронной почты успешно изменен!',
     };
     $operation = UserOpTypes::changeEmail;
   }else{
@@ -49,19 +49,22 @@ if ($method === 'GET') {
   if ($result['error'] && $result['code']!==403) goto endRequest;
 
   $opRecord = $result['opRecord']; unset($result['opRecord']);
-
+  //file_put_contents(__DIR__ . '/debug.log', print_r($opRecord, true), FILE_APPEND);
   $record_id = $opRecord['id'];
-  $user_Id = $opRecord['user_id'];
-  $newData['emailVerification'] = 1;
-  if ($operation===UserOpTypes::changeEmail) $newData['email'] = $opRecord['newEmail'];
+  $userId = $opRecord['user_id'];
 
-  if (!$result['error'] && $result['code']!==403){
-    $result = updateUserData($link,$result,$user_Id,$newData);
+  if (!$result['error'] && $operation===UserOpTypes::changeEmail){
+    $newEmail = $opRecord['newEmail'];
+    $result = changeEmail($link, $result,$userId, $newEmail );//Может вернуть ошибку 406, если с newEmail проблема.
+
+  }elseif (!$result['error'] && $operation===UserOpTypes::verifyEmail){
+    $result = emailVerification($link, $result, $userId);
     if ($result['error']) goto endRequest;
-  }//Пропускаем вызов функции. Возможен плановый error 403
+  }
 
+  //Вызываем даже в случае наличия ошибок. Внутри обработка 403 и 406 ошибки, при которой чистим данные
   $result = clearConfirmationField($result,$link,$record_id,$operation);
-
+  if ($result['error']) goto endRequest;
 
 } else {
   $result['code'] = 405;$result['message'] = $errors['MethodNotAllowed'];goto endRequest;

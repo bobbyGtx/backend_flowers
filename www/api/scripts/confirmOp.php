@@ -35,18 +35,17 @@ function checkConfirmationToken($result,mysqli $link, string $token, UserOpTypes
   if (!isset($row[$idFieldName]) || !isset($row[$user_IdFieldName]) || ($operation===UserOpTypes::changeEmail && !isset($row[$newEmailFieldName]))){
     $result['error']=true; $result['code']=500; $result['message'] = $dbError['unexpResponse'];goto endFunc;
   }
+  $result['opRecord'] = $row;
 
-  if ($row['createdAt']>0 & ($row['createdAt'] + $operation->tokenLifeTime())>time()){
+  if ($row['createdAt']>0 & ($row['createdAt'] + $operation->tokenLifeTime())<time()){
     $result['error']=true; $result['code']=403;
     $result['message'] = $opErrors['opTokenOutOfDate'];
     goto endFunc;
   }
   //file_put_contents(__DIR__ . '/debug.log', print_r($row, true), FILE_APPEND);
-  $result['opRecord'] = $row;
   endFunc:
   return $result;
 }
-
 
 function clearConfirmationField($result,mysqli $link,$record_id, UserOpTypes $operation){
   global $critErr, $errors;
@@ -54,7 +53,7 @@ function clearConfirmationField($result,mysqli $link,$record_id, UserOpTypes $op
   include_once 'variables.php';
   $funcName = 'clearConfirmationField_func';
 
-  if ($result['error'] && $result['code']!==403)goto endFunc;//В этой функции допустим $result['error'] при $result['code']=403;
+  if ($result['error'] && $result['code']!==403 && $result['code']!==406)goto endFunc;//В этой функции допустим $result['error'] при $result['code']=403 и 406;
   if (empty($record_id)){
     $result['error']=true; $result['code']=500;
     $result['message'] = $critErr['recordIdNotFound'];
@@ -67,7 +66,7 @@ function clearConfirmationField($result,mysqli $link,$record_id, UserOpTypes $op
   if ($operation === UserOpTypes::changeEmail) $fields[]='newEmail';
 
   $sql = "UPDATE user_operations ";
-  $sql.=$operation === UserOpTypes::changeEmail?"SET $tokenFieldName = NULL, $createdAtFieldName = NULL":"SET $tokenFieldName = NULL, $createdAtFieldName = NULL, newEmail = NULL ";
+  $sql.=$operation === UserOpTypes::changeEmail?"SET $tokenFieldName = NULL, $createdAtFieldName = NULL, newEmail = NULL ":"SET $tokenFieldName = NULL, $createdAtFieldName = NULL ";
   $sql.= "WHERE id = ?";
   try {
     $stmt = $link->prepare($sql);

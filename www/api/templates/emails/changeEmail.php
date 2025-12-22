@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Подтверждение электронной почты</title>
+  <title>Подтверждение изменения электронной почты</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
 
@@ -29,8 +29,8 @@
           <td style="padding:20px 40px; color:#333333; font-size:15px; line-height:1.6;">
             <p>Здравствуйте,</p>
             <p>
-              Благодарим вас за регистрацию в нашем магазине.
-              Для завершения процесса, пожалуйста, подтвердите ваш адрес электронной почты,
+              Вы запросили изменнеие email адреса на <?= $email ?>.
+              Для завершения процесса, пожалуйста, перейдите по ссылке,
               нажав на кнопку ниже.
             </p>
 
@@ -43,12 +43,11 @@
                                     padding:12px 24px;
                                     border-radius:4px;
                                     font-weight:bold;
-                                    display:inline-block;">
-                Подтвердить email
-              </a>
+                                    display:inline-block;"> Подтвердить изменение email </a>
             </p>
-            <p>Если вы не запрашивали данное действие, просто проигнорируйте это письмо.</p>
-            <p style="margin-top:30px;">С уважением,<br><strong>Команда Amora Flowers</strong></p>
+            <p>Ссылка действительна до <?= $endOfLifeDate ?>.</p>
+            <p style="color:red;">Если вы не запрашивали данное действие, немедленно <a href="<?= $passChangeUrl ?>">смените пароль</a> в нашем интернет-магазине.</p>
+            <p style="margin-top:30px;">С уважением,<br><strong>Команда компании</strong></p>
           </td>
         </tr>
         <!-- FOOTER -->
