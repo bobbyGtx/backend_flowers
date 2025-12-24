@@ -378,6 +378,7 @@ function changeEmail($link, $result, $userId, $newEmail) {
     }else goto endFunc;
   }
   $updatedAt = time();//Добавление временной метки
+  $emailValidation = 1;
 
   $sql = "UPDATE users
    SET email =  ?, updatedAt = ?, emailVerification = ?
@@ -386,7 +387,7 @@ function changeEmail($link, $result, $userId, $newEmail) {
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
-    $stmt->bind_param('siii', $newEmail,$updatedAt,1,$userId);
+    $stmt->bind_param('siii', $newEmail,$updatedAt,$emailValidation,$userId);
     $stmt->execute();
     $numRows = $stmt->affected_rows;
     $stmt->close();
@@ -643,7 +644,11 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
   $tokenField = $operationType->tokenField();
   $timeField = $operationType->timeField();
 
-  $sql = "INSERT INTO user_operations (user_id,newEmail,$tokenField,$timeField)VALUES (?,?,?,?)";
+  $sql = "INSERT INTO user_operations (`user_id`,`newEmail`,`{$tokenField}`,`{$timeField}`)VALUES (?,?,?,?)
+    ON DUPLICATE KEY UPDATE
+    newEmail = VALUES(newEmail),
+    `{$tokenField}` = VALUES(`{$tokenField}`),
+    `{$timeField}` = VALUES(`{$timeField}`)";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -659,7 +664,7 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
 }
 
 function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$reqLanguage=''){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode;
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode, $language;
   include_once 'enums.php';
   $funcName = 'sendRegisterVerificationEmail_func';
   if ($result['error']) goto endFunc;
@@ -672,9 +677,10 @@ function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$r
   $urlParamName = UserOpTypes::verifyEmail->urlParam();
   $date = new DateTime("@{$createdAt}");
   $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $createdDate = $date->format("d-m-Y H:i");
+  $createdDate = $date->format("d.m.Y H:i");
+  $languageTag = array_search($reqLanguage, $language);
   $logoUrl = $imagesUrl.'logo.png';
-  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$reqLanguage}";
+  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$languageTag}";
   //Получение шаблона из файла
   $templateFile = "{$emailTemplatesDir}".UserOpTypes::verifyEmail->emailTemplate()."{$reqLanguage}.php";
   if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}
@@ -683,8 +689,8 @@ function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$r
   $emailHtml = ob_get_clean();
   $mailSubject = match ($reqLanguage) {
     '_en' => '[AmoraFlowers] Email address confirmation',
-    '_de' => '[AmoraFlowers] Подтверждение email адреса',
-    default => '[AmoraFlowers] E-Mail-Adressbestätigung',
+    '_de' => '[AmoraFlowers] E-Mail-Adressbestätigung',
+    default => '[AmoraFlowers] Подтверждение email адреса',
   };
 
   $headers  = "MIME-Version: 1.0\r\n";
@@ -702,7 +708,7 @@ function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$r
   return $result;
 }//Чистить перед продакшеном if (!$productionMode)$result['mailLink'] = $confirmUrl;
 function sendChangeEmailConfirmation($result,$userEmail, $token, $createdAt,$reqLanguage=''){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode, $frontendAddress;
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode, $frontendAddress, $language;
   include_once 'enums.php';
   $funcName = 'sendRegisterVerificationEmail_func';
   if ($result['error']) goto endFunc;
@@ -716,14 +722,15 @@ function sendChangeEmailConfirmation($result,$userEmail, $token, $createdAt,$req
   $passChangeUrl = $frontendAddress.'/profile';
   $date = new DateTime("@{$createdAt}");
   $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $createdDate = $date->format("d-m-Y H:i");
+  $createdDate = $date->format("d.m.Y H:i");
   $actuallyFor = $createdAt + UserOpTypes::changeEmail->tokenLifeTime();
   $date = new DateTime("@{$actuallyFor}");
   $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $endOfLifeDate = $date->format("d-m-Y H:i");
+  $endOfLifeDate = $date->format("d.m.Y H:i");
 
   $logoUrl = $imagesUrl.'logo.png';
-  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$reqLanguage}";
+  $languageTag = array_search($reqLanguage, $language);
+  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$languageTag}";
   //Получение шаблона из файла
   $templateFile = "{$emailTemplatesDir}".UserOpTypes::changeEmail->emailTemplate()."{$reqLanguage}.php";
   if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}
@@ -732,8 +739,8 @@ function sendChangeEmailConfirmation($result,$userEmail, $token, $createdAt,$req
   $emailHtml = ob_get_clean();
   $mailSubject = match ($reqLanguage) {
     '_en' => '[AmoraFlowers] Email address confirmation',
-    '_de' => '[AmoraFlowers] Подтверждение email адреса',
-    default => '[AmoraFlowers] E-Mail-Adressbestätigung',
+    '_de' => '[AmoraFlowers] E-Mail-Adressbestätigung',
+    default => '[AmoraFlowers] Подтверждение email адреса',
   };
 
   $headers  = "MIME-Version: 1.0\r\n";
@@ -750,4 +757,3 @@ function sendChangeEmailConfirmation($result,$userEmail, $token, $createdAt,$req
   endFunc:
   return $result;
 }//Чистить перед продакшеном if (!$productionMode)$result['mailLink'] = $confirmUrl;
-

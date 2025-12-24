@@ -37,8 +37,7 @@
             </p>
 
             <p style="text-align:center; margin:30px 0;">
-              <a
-                href="<?= $confirmUrl ?>"
+              <a href="<?= $confirmUrl ?>"
                 style="
                                     background-color:#1a73e8;
                                     color:#ffffff;
@@ -46,8 +45,7 @@
                                     padding:12px 24px;
                                     border-radius:4px;
                                     font-weight:bold;
-                                    display:inline-block;"
-              >
+                                    display:inline-block;">
                 E-Mail bestätigen
               </a>
             </p>

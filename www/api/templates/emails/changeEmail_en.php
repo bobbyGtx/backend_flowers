@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Подтверждение изменения электронной почты</title>
+  <title>Email Change Confirmation</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
 
@@ -16,7 +16,7 @@
           <td align="center" style="padding:30px 20px;">
             <img
               src="<?= $logoUrl ?>"
-              alt="Логотип компании"
+              alt="Company logo"
               width="150"
               height="90"
               style="display:block; border:0;"
@@ -27,33 +27,30 @@
         <!-- CONTENT -->
         <tr>
           <td style="padding:20px 40px; color:#333333; font-size:15px; line-height:1.6;">
-            <p>Здравствуйте,</p>
-            <p>
-              Вы запросили изменнеие email адреса на <?= $userEmail ?>.
-              Для завершения процесса, пожалуйста, перейдите по ссылке,
-              нажав на кнопку ниже.
+            <p>Hello,</p>
+            <p>You have requested to change your email address to <?= $userEmail ?>.
+                To complete the process, please click the button below.
             </p>
 
             <p style="text-align:center; margin:30px 0;">
-              <a href="<?= $confirmUrl ?>"
-                 style="
+              <a href="<?= $confirmUrl ?>" style="
                                     background-color:#1a73e8;
                                     color:#ffffff;
                                     text-decoration:none;
                                     padding:12px 24px;
                                     border-radius:4px;
                                     font-weight:bold;
-                                    display:inline-block;"> Подтвердить изменение email </a>
+                                    display:inline-block;"> Confirm email change </a>
             </p>
-            <p>Ссылка действительна до <?= $endOfLifeDate ?>.</p>
-            <p style="color:red;">Если вы не запрашивали данное действие, немедленно <a href="<?= $passChangeUrl ?>">смените пароль</a> в нашем интернет-магазине.</p>
-            <p style="margin-top:30px;">С уважением,<br><strong>Команда Amora Flowers</strong></p>
+            <p>The link is valid until <?= $endOfLifeDate ?>.</p>
+            <p style="color:red;">If you did not request this action, please immediately <a href="<?= $passChangeUrl ?>">change your password</a> in our online store.</p>
+            <p style="margin-top:30px;">Kind regards,<br><strong>The Amora Flowers Team</strong></p>
           </td>
         </tr>
         <!-- FOOTER -->
         <tr>
           <td style="background-color:#f0f2f5; padding:15px 40px; font-size:12px; color:#777777;">
-            <p style="margin:0;">Это автоматическое сообщение. Пожалуйста, не отвечайте на него.</p>
+            <p style="margin:0;">This is an automated message. Please do not reply to it.</p>
           </td>
         </tr>
       </table>

@@ -37,7 +37,7 @@ function checkConfirmationToken($result,mysqli $link, string $token, UserOpTypes
   }
   $result['opRecord'] = $row;
 
-  if ($row['createdAt']>0 & ($row['createdAt'] + $operation->tokenLifeTime())<time()){
+  if ($operation->tokenLifeTime()>0 & ($row['createdAt'] + $operation->tokenLifeTime())<time()){
     $result['error']=true; $result['code']=403;
     $result['message'] = $opErrors['opTokenOutOfDate'];
     goto endFunc;

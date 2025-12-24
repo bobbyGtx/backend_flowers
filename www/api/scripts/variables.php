@@ -1,5 +1,5 @@
 <?php
-$productionMode = false;//верификация e-mail не обязательно в true
+$productionMode = true;//верификация e-mail не обязательно в true
 $frontendAddress = 'http://amoraflowers.com.xsph.ru';
 $projectDir = dirname(__DIR__,2);
 $settingsFile = $projectDir."/../DBSettings/dbData.json";//путь из папки scripts
