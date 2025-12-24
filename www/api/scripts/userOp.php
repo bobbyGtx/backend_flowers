@@ -748,7 +748,7 @@ function sendOpEmail($result,string $userEmail,string $token,UserOpTypes $operat
   $emailHtml = ob_get_clean();
   $headers  = "MIME-Version: 1.0\r\n";
   $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-  $headers .= "From: AmoraFlowers <noreply@mail.amoraflowers.com>\r\n";
+  $headers .= "From: AmoraFlowers <noreply@amoraflowers.atwebpages.com>\r\n";
   if (!$productionMode)$result['mailLink'] = $actionURL;
   else{
     $success = mail($userEmail, $mailSubject, $emailHtml, $headers);
