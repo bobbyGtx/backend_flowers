@@ -15,7 +15,7 @@
         <tr>
           <td align="center" style="padding:30px 20px;">
             <img
-              src="<?= $logoUrl ?>"
+              src="<?= $actionURL ?>"
               alt="Company Logo"
               width="150"
               height="90"
@@ -32,7 +32,7 @@
 
             <p style="text-align:center; margin:30px 0;">
               <a href="<?= $confirmUrl ?>"
-                 style="background-color:#1a73e8;
+                 style="background-color:#456F49;
                         color:#ffffff;
                         text-decoration:none;
                         padding:12px 24px;

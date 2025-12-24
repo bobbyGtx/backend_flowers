@@ -57,7 +57,7 @@ if ('OPTIONS' === $method) {
   $result = checkEmail($link,$result,$emailPost,false);//проверка уникальности почты
   if ($result['error']) goto endRequest;
   //добавление пользователя
-  $result = addUser($result, $link,$emailPost,$passwordPost);
+  $result = addUser($link,$result,$emailPost,$passwordPost);
   if ($result['error']) goto endRequest;
   $newUserId = $result['newUserId']; unset($result['newUserId']);
 
@@ -66,9 +66,10 @@ if ('OPTIONS' === $method) {
 
   $result = createUserOpRecord($result,$link,$newUserId,$operationType);
   if ($result['error']) goto endRequest;
-  $verifyEmailData = $result['data']; unset($result['data']);
+  ['token'=>$token] = $result['data']; unset($result['data']);
 
-  $result = sendRegisterVerificationEmail($result,$emailPost,$verifyEmailData['token'],$verifyEmailData['createdAt'],$reqLanguage);
+  $languageTag = array_search($reqLanguage, $language);
+  $result = sendOpEmail($result,$emailPost,$token,$operationType,$languageTag);
   if ($result['error']) goto endRequest;
   //Запись в таблице с корзиной создается при первом запросе корзины или при rebaseCart(post)
 }else {
@@ -76,6 +77,6 @@ if ('OPTIONS' === $method) {
 }
 
 endRequest:
-if ($link) mysqli_close($link);
+if (isset($link)) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
 echo json_encode($result);

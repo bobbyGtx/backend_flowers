@@ -42,5 +42,4 @@ enum UserOpTypes: string {
       self::resetPass => 21600,
     };
   }//Время жизни токенов в секундах. 0 - бессрочно
-
 }

@@ -7,12 +7,12 @@
  * @var string|null $endOfLifeDate (date | null)
  */
 
-$translations = require __DIR__ . '/translations/verifyEmailTranslations.php';
+$translations = require __DIR__ . '/translations/resetPassTranslations.php';
 $t = $translations[$languageTag] ?? $translations['en'];
 ?>
 
 <!DOCTYPE html>
-<html lang="<?= htmlspecialchars($languageTag) ?>">
+<html lang="<?= $t['lang'] ?>">
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($t['title']) ?></title>
@@ -22,7 +22,8 @@ $t = $translations[$languageTag] ?? $translations['en'];
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
     <tr>
         <td align="center">
-            <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden;">
+            <table width="600" cellpadding="0" cellspacing="0"
+                   style="background-color:#ffffff; border-radius:6px; overflow:hidden;">
 
                 <!-- HEADER -->
                 <tr>
@@ -40,14 +41,14 @@ $t = $translations[$languageTag] ?? $translations['en'];
                 <!-- CONTENT -->
                 <tr>
                     <td style="padding:20px 40px; color:#333333; font-size:15px; line-height:1.6;">
-                        <p><?= htmlspecialchars($t['greeting']) ?></p>
+                        <p><?= $t['greeting'] ?></p>
 
-                        <p><?= htmlspecialchars($t['intro']) ?></p>
+                        <p><?= nl2br($t['text_main']) ?></p>
 
                         <p style="text-align:center; margin:30px 0;">
                             <a href="<?= htmlspecialchars($actionURL) ?>"
                                style="
-                   background-color:#456F49;
+                    background-color:#456F49;
                    color:#ffffff;
                    text-decoration:none;
                    padding:12px 24px;
@@ -57,13 +58,11 @@ $t = $translations[$languageTag] ?? $translations['en'];
                               <?= htmlspecialchars($t['button']) ?>
                             </a>
                         </p>
-
                         <p>  <?= (empty($endOfLifeDate))
                             ? htmlspecialchars($t['link_no_expiry'])
-                            : sprintf(htmlspecialchars($t['link_expiry']), htmlspecialchars($endOfLifeDate)) ?>
-                        </p>
-
-                        <p><?= htmlspecialchars($t['ignore']) ?></p>
+                            : sprintf(htmlspecialchars($t['link_expiry']), htmlspecialchars($endOfLifeDate))
+                          ?></p>
+                        <p><?= nl2br($t['text_ignore']) ?></p>
 
                         <p style="margin-top:30px;">
                           <?= $t['signature'] ?>
@@ -74,9 +73,7 @@ $t = $translations[$languageTag] ?? $translations['en'];
                 <!-- FOOTER -->
                 <tr>
                     <td style="background-color:#f0f2f5; padding:15px 40px; font-size:12px; color:#777777;">
-                        <p style="margin:0;">
-                          <?= htmlspecialchars($t['footer']) ?>
-                        </p>
+                        <p style="margin:0;"><?= $t['footer'] ?></p>
                     </td>
                 </tr>
 

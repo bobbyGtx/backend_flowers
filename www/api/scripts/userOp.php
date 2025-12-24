@@ -1,6 +1,6 @@
 <?php
 //Проверка токена на валидность
-function checkEmail($link, $result, $email, $checkRegex = true) {
+function checkEmail(mysqli $link, $result, $email, $checkRegex = true) {
   include 'variables.php';
   $funcName = 'checkEmail_func';
   //Нужен доп параметр для того, чтоб контролировать ошибку. Если ошибка по функции, мы можем не завершать основной скрипт
@@ -19,9 +19,7 @@ function checkEmail($link, $result, $email, $checkRegex = true) {
 
   $email = strtolower($email);
   if ($checkRegex && !preg_match($emailRegEx, $email)) {
-    $result['error'] = true;
-    $result['code'] = 406;
-    $result['message'] = $errors['emailNotValid'];
+    $result['error'] = true;$result['code'] = 406;$result['message'] = $errors['emailNotValid'];
     goto endFunc;
   }
 
@@ -37,8 +35,41 @@ function checkEmail($link, $result, $email, $checkRegex = true) {
   endFunc:
   return $result;
 }
+function getUserInfoFromEmail(mysqli $link, $result, $email, $checkRegex = true) {
+  global $emailRegEx, $errors, $authError;
+  include_once 'variables.php';
+  $funcName = 'getUserInfoFromEmail_func';
 
-function addUser($result, $link, $email, $password) {
+  if (empty($link)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnect'] . "($funcName)";goto endFunc;}
+  if ($result['error']) goto endFunc;
+  if (empty($email)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'];goto endFunc;}
+
+  $email = strtolower($email);
+  if ($checkRegex && !preg_match($emailRegEx, $email)) {$result['error'] = true;$result['code'] = 406;$result['message'] = $errors['emailNotValid'];goto endFunc;}
+  $userIdField = 'id';//Идентификатор пользователя
+  $userBlockedField = 'blocked';//Отметка о блокировке пользователя
+  $emailField = 'email';//поле email для выборки
+
+  $sql = "SELECT $userIdField, $emailField, $userBlockedField FROM users WHERE $emailField = ?";
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param('s', $email);
+    $stmt->execute();
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;//только для select
+    $row = $response->fetch_assoc();
+    $stmt->close();
+  } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
+
+  if ($numRows !== 1) {$result['error'] = true;$result['code'] = 400;$result['message'] = $authError['emailNotFound'];goto endFunc;}
+
+  $result['user'] = $row;
+
+  endFunc:
+  return $result;
+}
+function addUser(mysqli $link, $result, $email, $password) {
   global $errors, $userTableName;
   include_once 'crypt.php';
   $funcName = 'addUser_func';
@@ -76,7 +107,7 @@ function addUser($result, $link, $email, $password) {
   return $result;
 }
 
-function getUserInfo($link, $result, $userId) {
+function getUserInfo(mysqli $link, $result, $userId) {
   include 'variables.php';
   $funcName = 'getUserInfo' . '_func';
 
@@ -142,7 +173,7 @@ function getUserInfo($link, $result, $userId) {
   return $result;
 }//Получение информации о пользователе. Возвращает данные в $result['user']
 
-function login($link, $result, $login, $pass) {
+function login(mysqli $link, $result, $login, $pass) {
   global $errors, $dataErr;
   include 'variables.php';
   $funcName = 'login_func';
@@ -232,7 +263,7 @@ function login($link, $result, $login, $pass) {
   return $result;
 }//Запрос из таблицы пользователей Возвращает данные в $result['user'] = userId, firstName, lastName
 
-function updateUserData($link, $result, $userId, $newData) {
+function updateUserData(mysqli $link, $result, $userId, $newData) {
   include 'variables.php';
   include_once "confirmOp.php";
   include_once "enums.php";
@@ -634,12 +665,12 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
   if ($operationType === UserOpTypes::changeEmail){
     if (!$newEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
     if (!preg_match($emailRegEx, $newEmail)) {$result['error'] = true;$result['code'] = 400;$result['message'] = $authError['emailNotValid'];goto endFunc;}
+    $newEmail = strtolower($newEmail);
   }
 
   $token = generate_string($operationTokenLength);
   if (!preg_match($opTokenRegEx, $token)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenInvalid'] . "($funcName)"; goto endFunc;}
   $createdAt=time();
-  $newEmail = strtolower($newEmail);
 
   $tokenField = $operationType->tokenField();
   $timeField = $operationType->timeField();
@@ -655,50 +686,73 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
     $stmt->bind_param("issi", $userId, $newEmail,$token, $createdAt);
     $stmt->execute();
     $stmt->close();
-  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['insertReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+  } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['insertReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
 
   $result['data'] = ['userId'=>$userId,'token'=>$token, 'createdAt' => $createdAt];
   if ($newEmail && $operationType === UserOpTypes::changeEmail)$result['data']['newEmail'] = $newEmail;
   endFunc:
   return $result;
 }
-
-function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$reqLanguage=''){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode, $language;
+function sendOpEmail($result,string $userEmail,string $token,UserOpTypes $operation,string $languageTag){
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $authError,$emailTemplatesDir, $productionMode, $passResetUrl, $language, $confirmationScriptURL, $passChangeUrl, $critErr;
   include_once 'enums.php';
-  $funcName = 'sendRegisterVerificationEmail_func';
+  $funcName = "sendOpEmail_func operation:($operation->name)";
   if ($result['error']) goto endFunc;
   if (!$userEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
   if (!preg_match($emailRegEx, $userEmail)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $authError['emailNotValid'] . "($funcName)";goto endFunc;}
   if (!$token){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenNotFound'] . "($funcName)";goto endFunc;}
   if (!preg_match($opTokenRegEx,$token)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenInvalid'] . "($funcName)";goto endFunc;}
-  if (!$createdAt) {$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['timeStampNotFound'] . "($funcName)";goto endFunc;}
 
-  $urlParamName = UserOpTypes::verifyEmail->urlParam();
-  $date = new DateTime("@{$createdAt}");
-  $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $createdDate = $date->format("d.m.Y H:i");
-  $languageTag = array_search($reqLanguage, $language);
+  $urlParamName = $operation->urlParam();
   $logoUrl = $imagesUrl.'logo.png';
-  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$languageTag}";
+  $reqLanguage = $language[$languageTag];//временное
+
+  if ($operation->tokenLifeTime()>0){
+    $actuallyFor = time() + $operation->tokenLifeTime();
+    $date = new DateTime("@{$actuallyFor}");
+    $date->setTimezone(new DateTimeZone('Europe/Berlin'));
+    $endOfLifeDate = $date->format("d.m.Y H:i");
+  }else $endOfLifeDate = null;
+
+  if ($operation===UserOpTypes::verifyEmail){
+    $mailSubject = match ($languageTag) {
+      'en' => '[AmoraFlowers] Email address confirmation',
+      'de' => '[AmoraFlowers] E-Mail-Adressbestätigung',
+      default => '[AmoraFlowers] Подтверждение email адреса',
+    };
+    $actionURL = "{$confirmationScriptURL}?{$urlParamName}={$token}&lng={$languageTag}";
+  }elseif ($operation===UserOpTypes::changeEmail){
+    $mailSubject = match ($languageTag) {
+      'en' => '[AmoraFlowers] New email address confirmation',
+      'de' => '[AmoraFlowers] Neue E-Mail-Adressbestätigung',
+      default => '[AmoraFlowers] Подтверждение нового email адреса',
+    };
+    $actionURL = "{$confirmationScriptURL}?{$urlParamName}={$token}&lng={$languageTag}";
+    $passChangeLink = $passChangeUrl;//Перенос переменной из настроек для доступности
+  }elseif ($operation===UserOpTypes::resetPass){
+    $mailSubject = match ($languageTag) {
+      'en' => '[AmoraFlowers] Reset user password',
+      'de' => '[AmoraFlowers] Benutzerpasswort zurücksetzen',
+      default => '[AmoraFlowers] Сброс пароля пользователя',
+    };
+    $actionURL = "{$passResetUrl}?{$urlParamName}={$token}&lng={$languageTag}";
+  }else{
+    $result['error'] = true;$result['code'] = 500;$result['message'] = $critErr['UserOpNotFound']." ({$funcName})";goto endFunc;
+  }
+  $templateFile = "{$emailTemplatesDir}".$operation->emailTemplate().".php";
   //Получение шаблона из файла
-  $templateFile = "{$emailTemplatesDir}".UserOpTypes::verifyEmail->emailTemplate()."{$reqLanguage}.php";
+
   if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}
   ob_start();
   include $templateFile;
   $emailHtml = ob_get_clean();
-  $mailSubject = match ($reqLanguage) {
-    '_en' => '[AmoraFlowers] Email address confirmation',
-    '_de' => '[AmoraFlowers] E-Mail-Adressbestätigung',
-    default => '[AmoraFlowers] Подтверждение email адреса',
-  };
-
   $headers  = "MIME-Version: 1.0\r\n";
   $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
   $headers .= "From: AmoraFlowers <noreply@mail.amoraflowers.com>\r\n";
-  if (!$productionMode)$result['mailLink'] = $confirmUrl;
+  if (!$productionMode)$result['mailLink'] = $actionURL;
   else{
     $success = mail($userEmail, $mailSubject, $emailHtml, $headers);
+    //$result['mail'] = [$userEmail,$mailSubject];
     if (!$success) {
       $result['error'] = true;$result['code'] = 500;$result['message'] = "E-Mail was not sent. ({$funcName})";goto endFunc;
     }
@@ -706,54 +760,4 @@ function sendRegisterVerificationEmail($result,$userEmail, $token, $createdAt,$r
 
   endFunc:
   return $result;
-}//Чистить перед продакшеном if (!$productionMode)$result['mailLink'] = $confirmUrl;
-function sendChangeEmailConfirmation($result,$userEmail, $token, $createdAt,$reqLanguage=''){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $projectUrl, $authError,$emailTemplatesDir, $productionMode, $frontendAddress, $language;
-  include_once 'enums.php';
-  $funcName = 'sendRegisterVerificationEmail_func';
-  if ($result['error']) goto endFunc;
-  if (!$userEmail){$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['emailNotRecognized'] . "($funcName)";goto endFunc;}
-  if (!preg_match($emailRegEx, $userEmail)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $authError['emailNotValid'] . "($funcName)";goto endFunc;}
-  if (!$token){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenNotFound'] . "($funcName)";goto endFunc;}
-  if (!preg_match($opTokenRegEx,$token)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['opTokenInvalid'] . "($funcName)";goto endFunc;}
-  if (!$createdAt) {$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['timeStampNotFound'] . "($funcName)";goto endFunc;}
-
-  $urlParamName = UserOpTypes::changeEmail->urlParam();
-  $passChangeUrl = $frontendAddress.'/profile';
-  $date = new DateTime("@{$createdAt}");
-  $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $createdDate = $date->format("d.m.Y H:i");
-  $actuallyFor = $createdAt + UserOpTypes::changeEmail->tokenLifeTime();
-  $date = new DateTime("@{$actuallyFor}");
-  $date->setTimezone(new DateTimeZone('Europe/Berlin'));
-  $endOfLifeDate = $date->format("d.m.Y H:i");
-
-  $logoUrl = $imagesUrl.'logo.png';
-  $languageTag = array_search($reqLanguage, $language);
-  $confirmUrl = "{$projectUrl}/api/confirm.php?{$urlParamName}={$token}&lng={$languageTag}";
-  //Получение шаблона из файла
-  $templateFile = "{$emailTemplatesDir}".UserOpTypes::changeEmail->emailTemplate()."{$reqLanguage}.php";
-  if (!file_exists($templateFile)){$result['error'] = true;$result['code'] = 500;$result['message'] = $opErrors['EmailTemplateNotFound'] . "($funcName)";goto endFunc;}
-  ob_start();
-  include $templateFile;
-  $emailHtml = ob_get_clean();
-  $mailSubject = match ($reqLanguage) {
-    '_en' => '[AmoraFlowers] Email address confirmation',
-    '_de' => '[AmoraFlowers] E-Mail-Adressbestätigung',
-    default => '[AmoraFlowers] Подтверждение email адреса',
-  };
-
-  $headers  = "MIME-Version: 1.0\r\n";
-  $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-  $headers .= "From: AmoraFlowers <noreply@mail.amoraflowers.com>\r\n";
-  if (!$productionMode)$result['mailLink'] = $confirmUrl;
-  else{
-    $success = mail($userEmail, $mailSubject, $emailHtml, $headers);
-    if (!$success) {
-      $result['error'] = true;$result['code'] = 500;$result['message'] = "E-Mail was not sent. ({$funcName})";goto endFunc;
-    }
-  }
-
-  endFunc:
-  return $result;
-}//Чистить перед продакшеном if (!$productionMode)$result['mailLink'] = $confirmUrl;
+}

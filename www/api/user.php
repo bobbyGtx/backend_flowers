@@ -72,9 +72,10 @@ if ($method === 'OPTIONS') {
     $operationType = UserOpTypes::changeEmail;
     $result = createUserOpRecord($result,$link,$userId,$operationType,$newEmail);
     if ($result['error']) goto endRequest;
-    ['token'=>$token,'createdAt'=>$createdAt,'newEmail'=>$newEmail]=$result['data']; unset($result['data']);
+    ['token'=>$token,'newEmail'=>$newEmail]=$result['data']; unset($result['data']);
 
-    $result = sendChangeEmailConfirmation($result,$newEmail,$token,$createdAt,$reqLanguage);
+    $languageTag = array_search($reqLanguage, $language);
+    $result = sendOpEmail($result,$newEmail,$token,$operationType,$languageTag);
     if ($result['error']) goto endRequest;
   }//Если тебуется изменение email - обрабатываем отправку почты для подтверждения
 

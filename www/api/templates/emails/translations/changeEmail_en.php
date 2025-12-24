@@ -33,8 +33,8 @@
             </p>
 
             <p style="text-align:center; margin:30px 0;">
-              <a href="<?= $confirmUrl ?>" style="
-                                    background-color:#1a73e8;
+              <a href="<?= $actionURL ?>" style="
+                                    background-color:#456F49;
                                     color:#ffffff;
                                     text-decoration:none;
                                     padding:12px 24px;
@@ -42,7 +42,7 @@
                                     font-weight:bold;
                                     display:inline-block;"> Confirm email change </a>
             </p>
-            <p>The link is valid until <?= $endOfLifeDate ?>.</p>
+            <p>The link is valid until <?= $passChangeLink ?>.</p>
             <p style="color:red;">If you did not request this action, please immediately <a href="<?= $passChangeUrl ?>">change your password</a> in our online store.</p>
             <p style="margin-top:30px;">Kind regards,<br><strong>The Amora Flowers Team</strong></p>
           </td>

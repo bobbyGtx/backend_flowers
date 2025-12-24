@@ -1,11 +1,18 @@
 <?php
-$productionMode = true;//верификация e-mail не обязательно в true
-$frontendAddress = 'http://amoraflowers.com.xsph.ru';
+$productionMode = false;//верификация e-mail не обязательно в true
+$productionURL = 'http://amoraflowers.com.xsph.ru';
+$frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
+$backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC
+$frontendAddress = $productionMode?$productionURL:$frontendDevURL;
+$projectUrl = $productionMode?$productionURL:"$backendDevURL";//Адрес папки проекта бэкэнда
+$passResetUrl = $frontendAddress.'/password-reset';//Адрес формы на фронтенде для ввода нового пароля
+$passChangeUrl = $frontendAddress.'/profile';//Адрес страницы на фронтенде, на которой пользователь может сменить пароль
+$confirmationScriptURL = $projectUrl.'/api/confirm.php';//путь скрипта для обработки подтверждающих запросов
 $projectDir = dirname(__DIR__,2);
 $settingsFile = $projectDir."/../DBSettings/dbData.json";//путь из папки scripts
 $templatesDir = $projectDir."/api/templates/";//путь из папки scripts
 $emailTemplatesDir = $projectDir."/api/templates/emails/";//путь из папки scripts
-$projectUrl = $productionMode?"http://amoraflowers.com.xsph.ru":"http://project.com";
+
 $imagesUrl = $projectUrl."/assets/";
 //переменные для работы с токенами
 $accessTokenHeader = 'x-access-token';
@@ -91,6 +98,7 @@ $dataErr['sortRuleNotRec'] = 'The sorting rule is not recognized!';
 $critErr['userDNotFound'] ='Critical error! User data not found in record.';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record.';//500
 $critErr['recordIdNotFound'] ='Critical error! Record ID not found.';//500
+$critErr['UserOpNotFound'] ='Critical error! Selected user operation type (enum) not processed.';//500
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';//400
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now!';
@@ -106,7 +114,7 @@ $errors['emailNotValid'] ='Email not valid!';//406
 $errors['emailNotRecognized'] = 'E-Mail not recognized!';//500, 400
 
 $authError['loginOrPassNC'] ='Login or password not correct!';
-$authError['emailNotFound'] ='E-mail not found in DB!';//401
+$authError['emailNotFound'] ='E-mail not found in DB!';//401, 400
 $authError['wrongPassword'] ='Password wrong!';//401
 $authError['emailNotValid'] ='Email not valid!';//401, 400
 $authError['passwortNotCorrect'] ='Password not acceptable!';//401
