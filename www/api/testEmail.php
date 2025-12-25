@@ -2,23 +2,19 @@
 
 //Проверяем тип запроса, обрабатываем только POST
 if ($_SERVER["REQUEST_METHOD"] == "POST" || $_SERVER["REQUEST_METHOD"] == "GET") {
-  $to = 'bobbygtx@gmail.com';//Почта получателя данных формы, если несколько - то через запятую
+  //$to = 'volobuiev.volodymyr@icloud.com';
+  $to = 'bobbygtx@gmail.com';
 
-//Получаем параметры посланные с JS
-  $them = 'Hello';//Тема письма
+  $thema = 'Hello';
 
-//Создаем переменную с содержанием письма
   $content = ' оставил заявку на бронирование для человек. Его телефон: ';
-
-  //Для отправки письма должен быть установлен заголовок Content-type
   $headers = 'MIME-Version: 1.0' . "\r\n";
   $headers .= 'Content-type: text/html; charset=utf-8' . "\r\n";
-  //Дополнительные заголовки
-  $headers .= 'From: AmoraFlowers <no-reply@aflowers.com>' . "\r\n"; //Почта для обратного ответа. ФИО можно удалить или указать фирму
+  $headers .= 'From: AmoraFlowers <noreply@amoraflowers.atwebpages.com>' . "\r\n";
 
 
   //1 параметр - получатель. 2 - тема письма. 3 - текст. 4 - заголовки
-  $success = mail($to, $them, $content, $headers);//Отправка письма
+  $success = mail($to, $thema, $content, $headers);//Отправка письма
 
   if ($success) {
     http_response_code(200);//отдаем код ответа 200 на http запрос
