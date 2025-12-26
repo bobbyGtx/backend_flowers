@@ -1,5 +1,5 @@
 <?php
-$productionMode = false;//верификация e-mail не обязательно в true
+$productionMode = true;//верификация e-mail не обязательно в true
 $productionURL = 'http://amoraflowers.atwebpages.com';//http://amoraflowers.com.xsph.ru
 $frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
 $backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC
@@ -136,6 +136,7 @@ $authError['accTokenNotFound'] = 'Access token not found or has not valid format
 $authError['refrTokenNotFound'] = 'Refresh token not found or has not valid format!';//401
 $authError['accTokenInvalid'] = 'Access token invalid!';//401
 $authError['accTokenOutOfDate'] = 'Access token out of date!';//401
+$authError['tooManyFailedLogins'] = 'Too many failed login attempts. Try later.';//429
 $opErrors['opTokenInvalid'] = 'Operation token invalid!';//500, 400
 $opErrors['opTokenNotFound'] = 'Operation token not found!';//500
 $opErrors['opTokenOutOfDate'] = 'Operation token out of date!';//400

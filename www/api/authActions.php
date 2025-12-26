@@ -19,11 +19,11 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
  */
 
 $method = $_SERVER['REQUEST_METHOD'];
-include_once 'scripts/variables.php';
-include_once 'scripts/userOp.php';
-include_once 'scripts/enums.php';
-include_once 'scripts/languageOp.php';
-include_once 'utils/checkUtils.php';
+include_once __DIR__ . '/scripts/variables.php';
+include_once __DIR__ . '/scripts/userOp.php';
+include_once __DIR__ . '/scripts/enums.php';
+include_once __DIR__ . '/scripts/languageOp.php';
+include_once __DIR__ . '/utils/checkUtils.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 if ($method === 'OPTIONS') {

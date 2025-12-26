@@ -174,14 +174,20 @@ function getUserInfo(mysqli $link, $result, $userId) {
   return $result;
 }//Получение информации о пользователе. Возвращает данные в $result['user']
 
-function login(mysqli $link, $result, $login, $pass) {
+/**
+ * @param mysqli $link - DB connection link
+ * @param $result - result array
+ * @param $login - Valid email
+ * @param $pass - Valid password
+ * @return array - $result
+ */
+function login(mysqli $link, $result, $login, $pass):array {
   global $errors, $dataErr;
   include 'variables.php';
   $funcName = 'login_func';
 
-  if (empty($result) || $result['error']) {
-    goto endFunc;
-  }
+  if (empty($result) || $result['error']) goto endFunc;
+
   if (!$link) {
     $result['error'] = true;
     $result['code'] = 500;
@@ -190,24 +196,10 @@ function login(mysqli $link, $result, $login, $pass) {
   }
   if (empty($pass) || empty($login)) {
     $result['error'] = true;
-    $result['code'] = 400;
+    $result['code'] = 500;
     $result['message'] = $dataErr['notRecognized'] . "($funcName)";
     goto endFunc;
   }
-
-  //проверка на соответствие минимальным требованиям почты и пароля перед запросом в БД. Если нет - возвращаем ошибку!
-  if (!preg_match($emailRegEx, $login)) {
-    $result['error'] = true;
-    $result['code'] = 401;
-    $result['message'] = $authError['emailNotValid'];
-    goto endFunc;
-  }
-  if (!preg_match($passwordRegEx, $pass)) {
-    $result['error'] = true;
-    $result['code'] = 401;
-    $result['message'] = $authError['wrongPassword'];
-    goto endFunc;
-  } //Всё равно отдаем ошибку о ошибочном пароле
 
   $sql = "SELECT id,email,`password`,emailVerification,blocked FROM users WHERE email = '$login';";
   try {
