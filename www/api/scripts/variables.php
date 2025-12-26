@@ -130,6 +130,7 @@ $authError['emailNotFound'] ='E-mail not found in DB!';//401, 400
 $authError['wrongPassword'] ='Password wrong!';//401
 $authError['emailNotValid'] ='Email not valid!';//401, 400
 $authError['passwortNotCorrect'] ='Password not acceptable!';//401
+
 $authError['refrTokenInvalid'] = 'Refresh token invalid!';//401
 $authError['refrTokenOutOfDate'] = 'Refresh token out of date!';//401
 $authError['accTokenNotFound'] = 'Access token not found or has not valid format!';//401
@@ -139,9 +140,14 @@ $authError['accTokenOutOfDate'] = 'Access token out of date!';//401
 $authError['tooManyFailedLogins'] = 'Too many failed login attempts. Try later.';//429
 $opErrors['opTokenInvalid'] = 'Operation token invalid!';//500, 400
 $opErrors['opTokenNotFound'] = 'Operation token not found!';//500
+$opErrors['confTokenNotFound'] = 'Confirmation token not found!';//400
 $opErrors['opTokenOutOfDate'] = 'Operation token out of date!';//400
 $opErrors['timeStampNotFound'] = 'Timestamp not found';//500
 $opErrors['EmailTemplateNotFound'] = 'Email template not found';//500
+$opErrors['linkNotValid'] = 'Link not valid';//400
+$opErrors['newPasswortNotRecognized'] ='New password not recognized!';//400
+$opErrors['newPasswortNotValid'] ='The new password is too simple!';//400
+$opErrors['passwordsNotMatch'] ="The passwords don't match!";//400
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
@@ -149,4 +155,3 @@ $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';
 $infoMessages['userBlocked'] = 'User blocked!';//403
 $infoMessages['linkNotvalid'] = 'Link is not valid!';//400
-$infoMessages['reques'] = 'User blocked!';//403

@@ -1,7 +1,7 @@
 <?php
 //$cryptedText = __encode($password, 'key'); //зашифровать
 //$decryptedText = __decode($cryptedText, 'key'); //расшифровать
-function __encode($unencoded, $key) {
+function __encode($unencoded, $key):string {
     $string = base64_encode($unencoded); // Переводим в base64
     $len = strlen($string);
     $chars = []; // Массив символов для новой строки
@@ -14,7 +14,7 @@ function __encode($unencoded, $key) {
     return implode('', $chars);
 }//Функция кодирования строки
 
-function __decode($encoded, $key) {
+function __decode($encoded, $key):string {
     $strofsym = "qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM=";
     $len = strlen($strofsym);
 

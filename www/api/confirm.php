@@ -2,8 +2,13 @@
 header("Content-Type: text/html; charset=utf-8");
 
 $method = $_SERVER['REQUEST_METHOD'];
-include_once 'scripts/variables.php';
-include_once 'scripts/languageOp.php';
+include_once __DIR__ . '/scripts/variables.php';
+include_once __DIR__ . '/scripts/enums.php';
+include_once __DIR__ . '/scripts/connectDB.php';
+include_once __DIR__ . '/scripts/languageOp.php';
+include_once __DIR__ . '/scripts/confirmOp.php';
+include_once __DIR__ . '/scripts/userOp.php';
+
 $reqLanguage = languageDetection($_GET);//Определение запрашиваемого языка и возврат приставки
 
 function render(string $template, array $vars = []): string {
@@ -14,10 +19,7 @@ function render(string $template, array $vars = []): string {
 }
 
 if ($method === 'GET') {
-  include_once 'scripts/enums.php';
-  include_once 'scripts/connectDB.php';
-  include_once 'scripts/confirmOp.php';
-  include_once 'scripts/userOp.php';
+  //Подтверждение E-Mail адреса и смена EMail. Обработка перехода по ссылке
   $result = ["error"=>false,'code'=>200,'message'=>'Operation was successful.'];
 
   if (isset($_GET['vToken'])) {
@@ -30,7 +32,6 @@ if ($method === 'GET') {
     $operation = UserOpTypes::verifyEmail;
   }elseif(isset($_GET['eToken'])){
     $token = $_GET['eToken'];
-
     $result['message'] = match ($reqLanguage) {
       '_en' => 'Email address successfully changed!',
       '_de' => 'E-Mail-Adresse wurde erfolgreich geändert!',
@@ -38,7 +39,7 @@ if ($method === 'GET') {
     };
     $operation = UserOpTypes::changeEmail;
   }else{
-    $result['error']=true; $result['code'] = 400;$result['message'] = 'Confirmation token not found!'; goto endRequest;
+    $result['error']=true; $result['code'] = 400;$result['message'] = $opErrors['confTokenNotFound']; goto endRequest;
   }
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link'];//Подключение к БД
@@ -66,7 +67,74 @@ if ($method === 'GET') {
   $result = clearConfirmationField($result,$link,$record_id,$operation);
   if ($result['error']) goto endRequest;
 
-} else {
+} elseif($method === 'POST'){
+  /**
+   * Смена пароля через запрос с формы фронтенда
+   * GET параметр:
+   * @var string $token ['rToken'] - обязательный токен.
+   * Обязательные входящие данные в теле запроса:
+   * @var string $newPassword ['newPassword']
+   * @var string $newPasswordRepeat ['newPasswordRepeat']
+   * Возвращает стандартный ответ на фронтенд
+   */
+  include_once __DIR__ . '/scripts/crypt.php';
+  $result = ["error"=>false,'code'=>200,'message'=>$infoMessages['reqSuccess']];
+  $operation = UserOpTypes::resetPass;
+  $token = $_GET[$operation->urlParam()] ?? null;
+  if (empty($token)){
+    $result['error']=true; $result['code'] = 400;
+    $result['message'] = $productionMode?$opErrors['linkNotValid']:$opErrors['confTokenNotFound'];
+    goto endPostRequest;
+  }
+  if (!preg_match($opTokenRegEx, $token)){
+    $result['error']=true; $result['code'] = 400;
+    $result['message'] = $productionMode?$opErrors['linkNotValid']:$opErrors['opTokenInvalid'];
+    goto endPostRequest;
+  }
+
+  $postData = file_get_contents('php://input');
+  $postDataJson = json_decode($postData, true);
+  $newPassword = strtolower($postDataJson["newPassword"]) ?? null;
+  if (empty($newPassword)){
+    $result['error']=true; $result['code'] = 400;
+    $result['message'] = $opErrors['newPasswortNotRecognized'];
+    goto endPostRequest;
+  }
+
+  if (preg_match($passwordRegEx, $newPassword)){
+    $result['error']=true; $result['code'] = 406;
+    $result['message'] = $opErrors['newPasswortNotValid'];
+    goto endPostRequest;
+  }
+
+  $newPasswordRepeat = $postDataJson["newPasswordRepeat"] ?? null;
+
+  if ($newPassword !== $newPasswordRepeat){
+    $result['error']=true; $result['code'] = 406;
+    $result['message'] = $opErrors['passwordsNotMatch'];
+    goto endPostRequest;
+  }
+
+  $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
+  if ($db_connect_response['error'] == true || !$link) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endPostRequest;
+  }
+  $settings = getSettings($link);//Получение ключа шифрования.
+  if (!$settings) {
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbrequestSettings']; goto endPostRequest;
+  } else  $key = $settings['secretKey'];//ключ шифрования паролей
+
+
+
+  $newUserPass = __encode($newPassword,$key);
+
+
+  endPostRequest:
+  if (isset($link))mysqli_close($link);
+  http_response_code($result['code']); unset($result['code']);
+  echo json_encode($result);
+  return;
+}else{
   $result['code'] = 405;$result['message'] = $errors['MethodNotAllowed'];goto endRequest;
 }
 
