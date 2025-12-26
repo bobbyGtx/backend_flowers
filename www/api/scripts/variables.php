@@ -1,5 +1,5 @@
 <?php
-$productionMode = true;//верификация e-mail не обязательно в true
+$productionMode = false;//верификация e-mail не обязательно в true
 $productionURL = 'http://amoraflowers.atwebpages.com';//http://amoraflowers.com.xsph.ru
 $frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
 $backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC
@@ -10,6 +10,10 @@ $passChangeUrl = $frontendAddress.'/profile';//Адрес страницы на 
 $confirmationScriptURL = $projectUrl.'/api/confirm.php';//путь скрипта для обработки подтверждающих запросов
 $projectDir = dirname(__DIR__,2);
 $settingsFile = $projectDir."/../DBSettings/dbData.json";//путь из папки scripts
+$errorLogDir = $projectDir."/../logs";
+$errorLogFile = $errorLogDir."/errors.log";
+$storageDir = $projectDir."/../storage";//путь из папки scripts
+$rateLimitDir = $storageDir.'/rate-limit';
 $templatesDir = $projectDir."/api/templates/";//путь из папки scripts
 $emailTemplatesDir = $projectDir."/api/templates/emails/";//путь из папки scripts
 
@@ -21,12 +25,15 @@ $accTokenField = 'accessToken';//название поля
 $accTokenLifeField = 'accTokenEndTime';//название поля
 $refreshTokenField = 'refreshToken';//название поля
 $refrTokenLifeField = 'refrTokenEndTime';//название поля
-$accTokenLenght = 100;
-$refrTokenLenght = 120;
+$accTokenLength = 100;
+$refreshTokenLength = 120;
 $accTokenLife = 600000;
 $refrTokenLife = 2629743;
 $operationTokenLength = 200;//токены для сброса пароля, верификации E-Mail и смены E-Mail. Время жизни в UserOpTypes ENUM
 
+$rateLimit = 30;//КД для операций типа сброс пароля
+$maxIncorrectLogins=3;//Количество неудачных попыток логина до блокировки
+$incorrectLoginsBlockTime = 300;//Время блокировки после $maxIncorrectLogins неудачных попыток
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
 $startOrderStatus = 1;//Индекс начального статуа при создании заказа
@@ -41,8 +48,8 @@ $firstNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-
 $lastNameRegEx = '/^(?=.{2,50}$)([A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*(?:\s[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+(?:-[A-ZА-ЯЁÄÖÜ][a-zа-яёßäöü]+)*)*)$/u';
 $zipCodeRegEx = '/^[0-9]{5}$/';
 $houseNumberRegEx = '/^\d{1,3}[A-Za-z]?$/';
-$accessTokenRegEx='/^[a-zA-Z0-9]{'.$accTokenLenght.'}$/';
-$refreshTokenRegEx='/^[a-zA-Z0-9]{'.$refrTokenLenght.'}$/';
+$accessTokenRegEx='/^[a-zA-Z0-9]{'.$accTokenLength.'}$/';
+$refreshTokenRegEx='/^[a-zA-Z0-9]{'.$refreshTokenLength.'}$/';
 $opTokenRegEx='/^[a-zA-Z0-9]{'.$operationTokenLength.'}$/';
 
 $regionsD = ['Baden-Württemberg','Bayern','Berlin','Brandenburg','Bremen','Hamburg','Hessen','Mecklenburg-Vorpommern','Niedersachsen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland','Sachsen','Sachsen-Anhalt','Schleswig-Holstein','Thüringen'];
@@ -89,6 +96,10 @@ $errors['allProductsCleared'] = 'All products from cart were not found in the da
 $errors['tokenFieldNotFound'] = 'Token field name not found in fieldList.';//500
 
 $errors['MethodNotAllowed']='Method Not Allowed';
+$errors['unknownOperationType']='Unknown operation type!';//400
+$errors['opTypeNotSupport']='Operation type not supported!';//400
+$errors['rateOpTypeNotFound']='Rate operation type not found!';//500
+$errors['emailAlreadyConfirmed']='Email address already confirmed!';//400
 $errors['dataNotAcceptable'] = 'Data not acceptable!';//406
 
 $dataErr['notRecognized'] = 'Request parameters not recognized!';//Code 500
@@ -99,6 +110,7 @@ $critErr['userDNotFound'] ='Critical error! User data not found in record.';
 $critErr['userIdNotFound'] ='Critical error! User ID not found in record.';//500
 $critErr['recordIdNotFound'] ='Critical error! Record ID not found.';//500
 $critErr['UserOpNotFound'] ='Critical error! Selected user operation type (enum) not processed.';//500
+$critErr['openFileError'] ='Critical error! Unable to open file.';//500
 
 $infoErrors['delivNotPos'] = 'Selected Delivery Type not possible now!';//400
 $infoErrors['paymentNotPos'] = 'Selected Payment method not possible now!';
@@ -136,3 +148,4 @@ $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';
 $infoMessages['userBlocked'] = 'User blocked!';//403
 $infoMessages['linkNotvalid'] = 'Link is not valid!';//400
+$infoMessages['reques'] = 'User blocked!';//403

@@ -42,4 +42,11 @@ enum UserOpTypes: string {
       self::resetPass => 21600,
     };
   }//Время жизни токенов в секундах. 0 - бессрочно
+  public function limitErrorMessage(): string {
+    return match ($this) {
+      self::verifyEmail => 'Email verification request limit exceeded!',
+      self::changeEmail => 'Email changing request limit exceeded!',
+      self::resetPass => 'Reset password request limit exceeded!',
+    };
+  }
 }

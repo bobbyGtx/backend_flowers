@@ -49,8 +49,9 @@ function getUserInfoFromEmail(mysqli $link, $result, $email, $checkRegex = true)
   $userIdField = 'id';//Идентификатор пользователя
   $userBlockedField = 'blocked';//Отметка о блокировке пользователя
   $emailField = 'email';//поле email для выборки
+  $emailVerificationField = 'emailVerification';
 
-  $sql = "SELECT $userIdField, $emailField, $userBlockedField FROM users WHERE $emailField = ?";
+  $sql = "SELECT $userIdField, $emailField, $userBlockedField,$emailVerificationField FROM users WHERE $emailField = ?";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}

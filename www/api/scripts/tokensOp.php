@@ -45,12 +45,12 @@ function generateTokens($link, $result, $userId){
    if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
    if (!$userId) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['userIdNotFound'] . "($funcName)"; goto endFunc;}
    
-   $accessToken = generate_string($accTokenLenght);//Генерация accessToken согласно длины из настроек
-   if (!$accessToken || strlen($accessToken)<>$accTokenLenght){
+   $accessToken = generate_string($accTokenLength);//Генерация accessToken согласно длины из настроек
+   if (!$accessToken || strlen($accessToken)<>$accTokenLength){
       $result['error']=true; $result['code']=500; $result['message']="Critical error! Problem with accessToken Generation($funcName)";goto endFunc;
    }//проверка наличия токена
-   $refreshToken = generate_string($refrTokenLenght);//Генерация refreshToken согласно длины из настроек
-   if (!$refreshToken || strlen($refreshToken)<>$refrTokenLenght){
+   $refreshToken = generate_string($refreshTokenLength);//Генерация refreshToken согласно длины из настроек
+   if (!$refreshToken || strlen($refreshToken)<>$refreshTokenLength){
       $result['error']=true; $result['code']=500; $result['message']="Critical error! Problem with refreshToken Generation($funcName)";goto endFunc;
    }//проверка наличия токена
    $nowTimeStamp = time();
