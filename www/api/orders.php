@@ -10,6 +10,23 @@ include 'scripts/variables.php';
 include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
+function renderOrderEmail(array $order, string $languageTag): array {
+  $subject = match ($languageTag) {
+    'en' => "[AmoraFlowers] Order confirmation #{$order['id']}",
+    'de' => "[AmoraFlowers] Bestellbestätigung Nr. {$order['id']}",
+    default => "[AmoraFlowers] Подтверждение заказа №{$order['id']}",
+  };
+
+  ob_start();
+  include __DIR__ . '/templates/emails/orderConfirmation.php';
+  $html = ob_get_clean();
+
+  return [
+    'subject' => $subject,
+    'html' => $html,
+  ];
+}
+
 if ($method === 'OPTIONS') {
   http_response_code(200);//ответ на пробный запрос
   return;
@@ -122,7 +139,16 @@ if ($method === 'OPTIONS') {
   //4) Сгенерировать ответ пользователю
   $result = getOrder($link, $result, $newOrderId,$reqLanguage);
   if ($result['error']) goto endRequest;
+  $order = $result['order'];
 
+  //E-Mail confirmation
+  $languageTag = array_search($reqLanguage, $language);
+  $emailData = renderOrderEmail($order, $languageTag);
+  $headers  = "MIME-Version: 1.0\r\n";
+  $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+  $headers .= "From: AmoraFlowers <noreply@amoraflowers.atwebpages.com>\r\n";
+
+  if ($productionMode) mail($order['email'], $emailData['subject'], $emailData['html'], $headers);
 
 } elseif ($method === 'GET') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
