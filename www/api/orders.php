@@ -6,17 +6,18 @@ header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Access-Token, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
-include 'scripts/variables.php';
+include_once 'scripts/variables.php';
 include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 function renderOrderEmail(array $order, string $languageTag): array {
+  global $imagesUrl, $frontendAddress,$frontendProductUrl;
   $subject = match ($languageTag) {
     'en' => "[AmoraFlowers] Order confirmation #{$order['id']}",
     'de' => "[AmoraFlowers] Bestellbestätigung Nr. {$order['id']}",
     default => "[AmoraFlowers] Подтверждение заказа №{$order['id']}",
   };
-
+  $logoUrl = $imagesUrl.'logo.png';
   ob_start();
   include __DIR__ . '/templates/emails/orderConfirmation.php';
   $html = ob_get_clean();

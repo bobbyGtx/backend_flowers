@@ -1,10 +1,11 @@
 <?php
-$productionMode = false;//верификация e-mail не обязательно в true
+$productionMode = true;//верификация e-mail не обязательно в true
 $productionURL = 'http://amoraflowers.atwebpages.com';//http://amoraflowers.com.xsph.ru
 $frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
 $backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC
 $frontendAddress = $productionMode?$productionURL:$frontendDevURL;
-$projectUrl = $productionMode?$productionURL:"$backendDevURL";//Адрес папки проекта бэкэнда
+$frontendProductUrl = $frontendAddress.'/product/';
+$projectUrl = $productionMode?$productionURL:$backendDevURL;//Адрес папки проекта бэкэнда
 $passResetUrl = $frontendAddress.'/password-reset';//Адрес формы на фронтенде для ввода нового пароля
 $passChangeUrl = $frontendAddress.'/profile';//Адрес страницы на фронтенде, на которой пользователь может сменить пароль
 $confirmationScriptURL = $projectUrl.'/api/confirm.php';//путь скрипта для обработки подтверждающих запросов
@@ -18,6 +19,7 @@ $templatesDir = $projectDir."/api/templates/";//путь из папки scripts
 $emailTemplatesDir = $projectDir."/api/templates/emails/";//путь из папки scripts
 
 $imagesUrl = $projectUrl."/assets/";
+$productsUrl = $imagesUrl."/products/";
 //переменные для работы с токенами
 $accessTokenHeader = 'x-access-token';
 $userTableName = 'users';//название таблицы с токенами

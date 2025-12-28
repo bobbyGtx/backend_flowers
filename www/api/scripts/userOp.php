@@ -433,7 +433,7 @@ function changeEmail($link, $result, $userId, $newEmail) {
  * @return array $result
  */
 function setNewPassword(mysqli $link, $result, int $userId, string $newPassword):array {
-  global $errors,$dbError, $infoMessages;
+  global $errors;
   include_once 'variables.php';
   $funcName = 'setNewPassword_func';
 
