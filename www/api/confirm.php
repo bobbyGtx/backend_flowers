@@ -1,5 +1,9 @@
 <?php
-header("Content-Type: text/html; charset=utf-8");
+header("Access-Control-Allow-Origin: * ");
+header("Content-Type: application/json");
+header("Access-Control-Allow-Methods: OPTIONS, PATCH, GET");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Language");
 
 $method = $_SERVER['REQUEST_METHOD'];
 include_once __DIR__ . '/scripts/variables.php';
@@ -30,6 +34,7 @@ if ($method === 'GET') {
   $result = ["error"=>false,'code'=>200,'message'=>'Operation was successful.'];
 
   if (isset($_GET[UserOpTypes::verifyEmail->urlParam()])) {
+    header("Content-Type: text/html; charset=utf-8");
     $token = $_GET[UserOpTypes::verifyEmail->urlParam()];
     $result['message'] = match ($reqLanguage) {
       '_en' => 'Email address confirmed!',
@@ -38,6 +43,7 @@ if ($method === 'GET') {
     };
     $operation = UserOpTypes::verifyEmail;
   }elseif(isset($_GET[UserOpTypes::changeEmail->urlParam()])){
+    header("Content-Type: text/html; charset=utf-8");
     $token = $_GET[UserOpTypes::changeEmail->urlParam()];
     $result['message'] = match ($reqLanguage) {
       '_en' => 'Email address successfully changed!',
