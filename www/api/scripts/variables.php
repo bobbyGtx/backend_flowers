@@ -1,5 +1,5 @@
 <?php
-$productionMode = true;//верификация e-mail не обязательно в true
+$productionMode = false;//верификация e-mail не обязательно в true
 $productionURL = 'http://amoraflowers.atwebpages.com';//http://amoraflowers.com.xsph.ru
 $frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
 $backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC
@@ -30,6 +30,7 @@ $refreshTokenLength = 120;
 $accTokenLife = 600000;
 $refrTokenLife = 2629743;
 $operationTokenLength = 200;//токены для сброса пароля, верификации E-Mail и смены E-Mail. Время жизни в UserOpTypes ENUM
+//opTokenLifeTimes in UserOpTypes enum
 
 $rateLimit = 30;//КД для операций типа сброс пароля
 $maxIncorrectLogins=3;//Количество неудачных попыток логина до блокировки
@@ -141,17 +142,17 @@ $authError['tooManyFailedLogins'] = 'Too many failed login attempts. Try later.'
 $opErrors['opTokenInvalid'] = 'Operation token invalid!';//500, 400
 $opErrors['opTokenNotFound'] = 'Operation token not found!';//500
 $opErrors['confTokenNotFound'] = 'Confirmation token not found!';//400
-$opErrors['opTokenOutOfDate'] = 'Operation token out of date!';//400
+$opErrors['opTokenOutOfDate'] = 'Operation token out of date!';//400,403
 $opErrors['timeStampNotFound'] = 'Timestamp not found';//500
 $opErrors['EmailTemplateNotFound'] = 'Email template not found';//500
 $opErrors['linkNotValid'] = 'Link not valid';//400
-$opErrors['newPasswortNotRecognized'] ='New password not recognized!';//400
-$opErrors['newPasswortNotValid'] ='The new password is too simple!';//400
-$opErrors['passwordsNotMatch'] ="The passwords don't match!";//400
+$opErrors['newPasswordNotRecognized'] ='New password not recognized!';//400
+$opErrors['newPasswortNotValid'] ='New password is too simple!';//406
+$opErrors['passwordsNotMatch'] ="Passwords don't match!";//400
 
 $infoMessages['reqSuccess'] = 'Request success!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';
+$infoMessages['passwordNotChanged'] = 'The password has not been changed!';
 $infoMessages['userBlocked'] = 'User blocked!';//403
-$infoMessages['linkNotvalid'] = 'Link is not valid!';//400

@@ -418,13 +418,55 @@ function changeEmail($link, $result, $userId, $newEmail) {
   } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
 
   if ($numRows <> 1){
-    $errorDump=$errors['updReqNothing']."($funcName). Table[users], User ID = $record_id";
+    $errorDump=$errors['updReqNothing']."($funcName). Table[users], User ID = $userId";
     file_put_contents(__DIR__ . '../logs/debug.log', print_r($errorDump, true), FILE_APPEND);
   }//Если затронуто 0 строк - ошибка в лог файл
 
   endFunc:
   return $result;
 }//Изменение email пользователя и установка 1 в поле emailVerification
+/**
+ * @param mysqli $link - DB connection link
+ * @param $result
+ * @param int $userId - user ID
+ * @param string $newPassword - encrypted new password
+ * @return array $result
+ */
+function setNewPassword(mysqli $link, $result, int $userId, string $newPassword):array {
+  global $errors,$dbError, $infoMessages;
+  include_once 'variables.php';
+  $funcName = 'setNewPassword_func';
+
+  if (empty($result) || $result['error']) goto endFunc;
+  if (!$link) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dbConnectInterrupt'] . "($funcName)";goto endFunc;}
+  if (!$userId) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['userIdNotFound'] . "($funcName)";goto endFunc;}
+  if (empty($newPassword)) {$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['dataNotFound'] . "($funcName)";goto endFunc;}
+
+  $updatedAt = time();//Добавление временной метки
+
+  $sql = "UPDATE users
+   SET password =  ?, updatedAt = ?, accessToken = NULL, accTokenEndTime = NULL, refreshToken = NULL, refrTokenEndTime = NULL
+   WHERE id = ?";
+
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param('sii', $newPassword,$updatedAt,$userId);
+    $stmt->execute();
+    $numRows = $stmt->affected_rows;
+    $stmt->close();
+  } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
+
+  $result['numRows'] = $numRows;
+
+  if ($numRows <> 1){
+    $errorDump=$errors['updReqNothing']."($funcName). Table[users], User ID = $userId";
+    file_put_contents(__DIR__ . '../logs/debug.log', print_r($errorDump, true), FILE_APPEND);
+  }//Если затронуто 0 строк - ошибка в лог файл.
+
+  endFunc:
+  return $result;
+}//Изменение пароля пользователя
 
 /*
  * Функция проверяет переданные в запрос данные и обрабатывает их.
