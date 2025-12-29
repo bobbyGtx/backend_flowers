@@ -1,5 +1,5 @@
 <?php
-$productionMode = true;//верификация e-mail не обязательно в true
+$productionMode = false;//верификация e-mail не обязательно в true
 $productionURL = 'http://amoraflowers.atwebpages.com';//http://amoraflowers.com.xsph.ru
 $frontendDevURL = 'http://localhost:4200';//Адрес активного фронтенда в режиме разработки.
 $backendDevURL = "http://project.com";//Адрес папки бэкэнда на devPC

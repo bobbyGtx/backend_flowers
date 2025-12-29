@@ -457,8 +457,6 @@ function setNewPassword(mysqli $link, $result, int $userId, string $newPassword)
     $stmt->close();
   } catch (Exception $e) {$eMessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($eMessage))";goto endFunc;}
 
-  $result['numRows'] = $numRows;
-
   if ($numRows <> 1){
     $errorDump=$errors['updReqNothing']."($funcName). Table[users], User ID = $userId";
     file_put_contents(__DIR__ . '../logs/debug.log', print_r($errorDump, true), FILE_APPEND);
