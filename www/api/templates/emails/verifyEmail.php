@@ -4,6 +4,7 @@
  * @var string $languageTag (ru|en|de)
  * @var string $actionURL
  * @var string $logoUrl
+ * @var string $frontendAddress
  * @var string|null $endOfLifeDate (date | null)
  */
 
@@ -17,9 +18,9 @@ $t = $translations[$languageTag] ?? $translations['en'];
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($t['title']) ?></title>
 </head>
-<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
+<body style="margin:0; padding:0; background-color:#a4cba3; font-family:Arial, Helvetica, sans-serif;">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:20px 0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#B6D5B9; padding:20px 10px;">
     <tr>
         <td align="center">
             <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:6px; overflow:hidden;">
@@ -27,6 +28,7 @@ $t = $translations[$languageTag] ?? $translations['en'];
                 <!-- HEADER -->
                 <tr>
                     <td align="center" style="padding:30px 20px;">
+                        <a href="<?= htmlspecialchars($frontendAddress) ?>" target="_blank" style="cursor:pointer;">
                         <img
                                 src="<?= htmlspecialchars($logoUrl) ?>"
                                 alt="<?= htmlspecialchars($t['logo_alt']) ?>"
@@ -34,6 +36,7 @@ $t = $translations[$languageTag] ?? $translations['en'];
                                 height="90"
                                 style="display:block; border:0;"
                         >
+                        </a>
                     </td>
                 </tr>
 

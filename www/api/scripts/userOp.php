@@ -729,7 +729,7 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
   return $result;
 }
 function sendOpEmail($result,string $userEmail,string $token,UserOpTypes $operation,string $languageTag){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $authError,$emailTemplatesDir, $productionMode, $passResetUrl, $language, $confirmationScriptURL, $passChangeUrl, $critErr;
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $frontendAddress, $authError,$emailTemplatesDir, $productionMode, $passResetUrl, $language, $confirmationScriptURL, $passChangeUrl, $critErr;
   include_once 'enums.php';
   $funcName = "sendOpEmail_func operation:($operation->name)";
   if ($result['error']) goto endFunc;

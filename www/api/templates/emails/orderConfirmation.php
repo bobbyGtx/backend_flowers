@@ -23,7 +23,7 @@ $t = $translations[$languageTag] ?? $translations['ru'];
 <table width="100%" cellpadding="0" cellspacing="0">
   <tr>
     <td align="center">
-      <table width="600" cellpadding="12" cellspacing="0" style="background:#B6D5B9;">
+      <table width="600" cellpadding="12" cellspacing="0" style="background:#B6D5B9; padding:20px 10px;">
           <!-- HEADER -->
           <tr>
               <td align="center" style="padding:30px 20px;">
@@ -35,6 +35,7 @@ $t = $translations[$languageTag] ?? $translations['ru'];
                           height="90"
                           style="display:block; border:0;"
                   >
+                  </a>
               </td>
           </tr>
 
@@ -103,6 +104,7 @@ $t = $translations[$languageTag] ?? $translations['ru'];
 
         <tr>
           <td align="right">
+            <?= $t['productsCost'] ?>: <?= (float)$order['totalAmount'] - (float)$order['deliveryCost'] ?> € <br>
             <?= $t['deliveryCost'] ?>: <?= $order['deliveryCost'] ?> € <br>
             <strong><?= $t['total'] ?>: <?= $order['totalAmount'] ?> €</strong>
           </td>
