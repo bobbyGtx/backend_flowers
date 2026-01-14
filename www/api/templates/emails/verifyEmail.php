@@ -28,7 +28,7 @@ $t = $translations[$languageTag] ?? $translations['en'];
                 <!-- HEADER -->
                 <tr>
                     <td align="center" style="padding:30px 20px;">
-                        <a href="<?= htmlspecialchars($frontendAddress) ?>" target="_blank" style="cursor:pointer;">
+                        <a href="<?= htmlspecialchars($frontendAddress.'/'.$languageTag) ?>" target="_blank" style="cursor:pointer;">
                         <img
                                 src="<?= htmlspecialchars($logoUrl) ?>"
                                 alt="<?= htmlspecialchars($t['logo_alt']) ?>"
