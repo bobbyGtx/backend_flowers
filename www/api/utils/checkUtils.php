@@ -1,12 +1,11 @@
 <?php
-
-function checkRateLimit($result,string $identifier, UserOpTypes $type, int|null $ttlSeconds=null) {
+function checkRateLimit($result,string $identifier, UserOpTypes $type) {
   global $rateLimit, $critErr, $errorLogFile, $rateLimitDir;
   include_once __DIR__ . '/../scripts/variables.php';
   include_once __DIR__ . '/../scripts/enums.php';
   $funcName = "checkRateLimit_func";
 
-  if (empty($ttlSeconds)) $ttlSeconds = $rateLimit;
+  $ttlSeconds = $rateLimit;
 
   $file = $rateLimitDir . '/' . $type->value . '.json';
 

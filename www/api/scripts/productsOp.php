@@ -7,7 +7,11 @@ function getProductShortInfo($link, $result, $productId, $languageTag=''){
   if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
   if (!$productId) {$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdNotFound'] . "($funcName)"; goto endFunc;}
 
-  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`image`,`url`,`count`,`disabled` FROM `products` WHERE `id` = $productId;";
+  $sql = "SELECT 
+    `id`,
+    `name$languageTag` as `name`,
+    `price`,`image`,`url`,`count`,`disabled`
+    FROM `products` WHERE `id` = $productId;";
   try {
     $stmt = $link->prepare($sql);
     if (!$stmt) {throw new Exception($link->error);}
@@ -164,7 +168,7 @@ function getProducts($link, $result, $getReq, $languageTag=''){
   
   $baseSQL = "SELECT 
   p.id,
-  p.name$languageTag,
+  p.name$languageTag as name,
   p.price, 
   p.image,
   p.lightning$languageTag as lightning,
@@ -224,13 +228,13 @@ function getProductInfo($link, $result, $productUrl, $languageTag=''){
 
   $sql = "SELECT 
   p.id,
-  p.name$languageTag,
+  p.name$languageTag as name,
   p.price,
   p.image,
   p.type_id,
-  p.lightning$languageTag,
-  p.humidity$languageTag,
-  p.temperature$languageTag,
+  p.lightning$languageTag as lightning,
+  p.humidity$languageTag as humidity,
+  p.temperature$languageTag as temperature,
   p.height,
   p.diameter,
   p.url,
@@ -278,7 +282,16 @@ function searchProducts($link, $result, $searchStr, $languageTag=''){
   if (!$searchStr) {$result['error']=true; $result['code']=500; $result['message'] = $dataErr['dataInFunc'] . "($funcName)"; goto endFunc;}
   $searchStr = '%' . strtolower($searchStr) . '%';
 
-  $sql = "SELECT p.id,p.name$languageTag,p.price,p.image,p.type_id,p.lightning$languageTag,p.humidity$languageTag,p.temperature$languageTag,p.height,p.diameter,p.url,p.count,p.disabled, t.name$languageTag as typeName, t.url as typeUrl, t.category_id
+  $sql = "SELECT p.id,
+       p.name$languageTag as name,
+       p.price,
+       p.image,p.type_id,
+       p.lightning$languageTag as lightning,
+       p.humidity$languageTag as humidity,
+       p.temperature$languageTag as temperature,
+       p.height,p.diameter,p.url,p.count,p.disabled,
+       t.name$languageTag as typeName,
+       t.url as typeUrl, t.category_id
     FROM products p 
     INNER JOIN types t ON p.type_id = t.id
     WHERE LOWER(p.name) LIKE LOWER(?)

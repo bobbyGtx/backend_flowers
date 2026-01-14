@@ -21,18 +21,19 @@ function render(string $template, array $vars = []): string {
   include $template;
   return ob_get_clean();
 }
-
-if ($method === 'GET') {
+if ($method === 'OPTIONS'){
+  http_response_code(200);
+  return;//ответ на пробный запрос
+}
+elseif ($method === 'GET') {
   /**
    * @param string|null $_GET['vToken'] - Email verification procedure (web template response)
    * @param string|null $_GET['eToken'] - Email change procedure (web template response)
    * @param string|null $_GET['rToken'] - Check password reset token. JSON Response
    * @param string|null $_GET ['lng'] - languageTag (ru|en|de). default = ru
    */
-
   //Подтверждение E-Mail адреса и смена EMail. Обработка перехода по ссылке
   $result = ["error"=>false,'code'=>200,'message'=>'Operation was successful.'];
-
   if (isset($_GET[UserOpTypes::verifyEmail->urlParam()])) {
     header("Content-Type: text/html; charset=utf-8");
     $token = $_GET[UserOpTypes::verifyEmail->urlParam()];
@@ -108,7 +109,8 @@ if ($method === 'GET') {
   }
   echo $page;
   return;
-} elseif($method === 'POST') {
+}
+elseif($method === 'POST') {
   /**
    * Смена пароля через запрос с формы фронтенда
    * GET параметр:
@@ -119,7 +121,7 @@ if ($method === 'GET') {
    * Возвращает стандартный ответ на фронтенд
    */
   include_once __DIR__ . '/scripts/crypt.php';
-  $result = ["error"=>false,'code'=>200,'message'=>$infoMessages['reqSuccess']];
+  $result = ["error"=>false,'code'=>200,'message'=>$infoMessages['passwordChanged']];
   $operation = UserOpTypes::resetPass;
   $token = $_GET[$operation->urlParam()] ?? null;
   if (empty($token)){
@@ -189,9 +191,9 @@ if ($method === 'GET') {
   $result = clearConfirmationField($result,$link,$record_id,$operation);
   if ($result['error']) goto endRequest;
 
-  /* 200 - The password has not been changed! - Если старый и новый пароли совпадают
+  /*
    * Errors
-   * 400:
+   * 400:Link not valid | Confirmation token not found!
    *
    * 403 - Operation token out of date!
    * 406 :
@@ -199,7 +201,8 @@ if ($method === 'GET') {
    *  - New password is too simple!
    *  - Passwords don't match!
    */
-}else{
+}
+else{
   $result['code'] = 405;$result['message'] = $errors['MethodNotAllowed'];goto endRequest;
 }
 

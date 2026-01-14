@@ -6,7 +6,7 @@ $backendDevURL = "http://project.com";//Адрес папки бэкэнда н�
 $frontendAddress = $productionMode?$productionURL:$frontendDevURL;
 $frontendProductUrl = $frontendAddress.'/product/';
 $projectUrl = $productionMode?$productionURL:$backendDevURL;//Адрес папки проекта бэкэнда
-$passResetUrl = $frontendAddress.'/password-reset';//Адрес формы на фронтенде для ввода нового пароля
+$passResetUrl = $frontendAddress.'/change-password';//Адрес формы на фронтенде для ввода нового пароля
 $passChangeUrl = $frontendAddress.'/profile';//Адрес страницы на фронтенде, на которой пользователь может сменить пароль
 $confirmationScriptURL = $projectUrl.'/api/confirm.php';//путь скрипта для обработки подтверждающих запросов
 $projectDir = dirname(__DIR__,2);
@@ -36,7 +36,7 @@ $operationTokenLength = 200;//токены для сброса пароля, в�
 
 $rateLimit = 30;//КД для операций типа сброс пароля
 $maxIncorrectLogins=3;//Количество неудачных попыток логина до блокировки
-$incorrectLoginsBlockTime = 300;//Время блокировки после $maxIncorrectLogins неудачных попыток
+$incorrectLoginsBlockTime = 30;//Время блокировки после $maxIncorrectLogins неудачных попыток
 $endsCount = 20;//Кол-во товаров с которых появляется метка "заканчивается"
 $language=['ru'=>'','en'=>'_en','de'=>'_de'];//префикс для поля в бд
 $startOrderStatus = 1;//Индекс начального статуа при создании заказа
@@ -157,4 +157,5 @@ $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';
 $infoMessages['passwordNotChanged'] = 'The password has not been changed!';
+$infoMessages['passwordChanged'] = 'The password has been changed!';
 $infoMessages['userBlocked'] = 'User blocked!';//403

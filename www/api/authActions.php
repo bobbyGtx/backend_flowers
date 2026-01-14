@@ -10,7 +10,7 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
  * @var UserOpTypes $operation (verifyEmail|resetPass|)//changeEmail not work
  * @var string      $email
  *  Errors
- *  400 - E-Mail not recognized!,E-mail not found in DB!,Unknown operation type!,Operation type not supported!,Email address already confirmed!
+ *  400 - E-Mail not recognized!,E-mail not found in DB!,Email address already confirmed!
  *  403 - User blocked!
  *  406 - Email not valid!
  *  429 - Добавляется переменная $result['timer']
@@ -33,9 +33,9 @@ if ($method === 'OPTIONS') {
   $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
   $postData = json_decode(file_get_contents('php://input'), true);//парсинг параметров запроса
   if (isset($postData['operation'])) $operation = UserOpTypes::tryFrom($postData['operation']);
-  if (!isset($operation)) {$result['error']=true; $result['code'] = 400; $result['message'] = $errors['unknownOperationType']; goto endRequest;}
+  if (!isset($operation)) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['unknownOperationType']; goto endRequest;}
   if ($operation !== UserOpTypes::verifyEmail && $operation !== UserOpTypes::resetPass){
-    $result['error']=true; $result['code'] = 400; $result['message'] = $errors['opTypeNotSupport'];goto endRequest;
+    $result['error']=true; $result['code'] = 500; $result['message'] = $errors['opTypeNotSupport'];goto endRequest;
   }
   if (isset($postData['email'])) $userEmailPost = $postData['email'];
   if (!isset($userEmailPost)) {$result['error']=true; $result['code'] = 400; $result['message'] = $errors['emailNotRecognized']; goto endRequest;}
@@ -43,7 +43,6 @@ if ($method === 'OPTIONS') {
 
   $result = checkRateLimit($result,$userEmailPost,$operation);
   if ($result['error']) goto endRequest;
-
 
   $db_connect_response = dbConnect(); $link = $db_connect_response['link']; //Подключение к БД
   if ($db_connect_response['error'] || !$link) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;}
@@ -60,6 +59,7 @@ if ($method === 'OPTIONS') {
   $result = createUserOpRecord($result,$link, $userId, $operation);
   if ($result['error']) goto endRequest;
   ['token'=>$token, 'createdAt'=>$createdAt] = $result['data']; unset($result['data']);
+  $result['timer'] = $rateLimit;
 
   $result = sendOpEmail($result,$userEmail,$token,$operation,$languageTag);
   if ($result['error']) goto endRequest;
@@ -71,4 +71,4 @@ if ($method === 'OPTIONS') {
 endRequest:
 if (isset($link)) mysqli_close($link);
 http_response_code($result['code']); unset($result['code']);
-echo json_encode($result);
+echo json_encode($result, JSON_UNESCAPED_UNICODE);
