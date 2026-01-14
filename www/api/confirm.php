@@ -102,6 +102,9 @@ elseif ($method === 'GET') {
       'code' => $productionMode?null:$result['code'],
     ]);
   }else{
+    $languageTag = array_search($reqLanguage, $language);
+    $frontendAddress = "{$frontendAddress}/{$languageTag}";
+
     $page = render("{$templatesDir}/success{$reqLanguage}.php", [
       'message' => $message,
       'link' => $frontendAddress,
@@ -162,7 +165,6 @@ elseif($method === 'POST') {
   if ($db_connect_response['error'] == true || !$link) {
     $result['error']=true; $result['code'] = 500; $result['message'] = $errors['dbConnect'] . $db_connect_response['message']; goto endRequest;
   }
-
   //Проверка токена
   $result = checkConfirmationToken($result,$link,$token,$operation);
   if ($result['error']){
