@@ -3,7 +3,7 @@
  * Обязательные переменные:
  * @var string $languageTag (ru|en|de)
  * @var array $order
- * @var string $frontendProductUrl
+ * @var string $frontendProductUrl - базовый url страницы продукта с учетом языка
  * @var string $imagesUrl
  * @var string $logoUrl
  * @var string $frontendAddress
@@ -82,19 +82,18 @@ $t = $translations[$languageTag] ?? $translations['ru'];
             <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;">
               <?php foreach ($order['items'] as $item): ?>
                 <tr>
-
                   <td>
-                      <a href="<?= htmlspecialchars($frontendProductUrl . $item->url)?>" target="_blank"
+                      <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank"
                       style="
                         text-decoration:none;
                         color: #456F49;
                         cursor: pointer;
                         ">
-                        <?= htmlspecialchars($item->name) ?>
+                        <?= htmlspecialchars($item['name']) ?>
                       </a>
                   </td>
                   <td align="right">
-                    <?= $item->quantity ?> × <?= $item->price ?> €
+                    <?= $item['quantity'] ?> × <?= $item['price'] ?> €
                   </td>
                 </tr>
               <?php endforeach; ?>

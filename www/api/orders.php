@@ -11,12 +11,13 @@ include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
 function renderOrderEmail(array $order, string $languageTag): array {
-  global $imagesUrl, $frontendAddress,$frontendProductUrl;
+  global $imagesUrl, $frontendAddress,$frontendProductPage;
   $subject = match ($languageTag) {
     'en' => "[AmoraFlowers] Order confirmation #{$order['id']}",
     'de' => "[AmoraFlowers] Bestellbestätigung Nr. {$order['id']}",
     default => "[AmoraFlowers] Подтверждение заказа №{$order['id']}",
   };
+  $frontendProductUrl = $frontendAddress.'/'.$languageTag.'/'.$frontendProductPage .'/';
   $logoUrl = $imagesUrl.'logo.png';
   ob_start();
   include __DIR__ . '/templates/emails/orderConfirmation.php';
