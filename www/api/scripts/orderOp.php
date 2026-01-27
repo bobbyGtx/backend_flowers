@@ -90,7 +90,7 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
   endFunc:
   return $result;
 }
-//Перенести в продуктс ОП если он будет
+//Перенести в продукт с ОП если он будет
 function updateProductsCounts($link, $result, $updatesProducts)
 {
   //Функция автоматом дизейблит товар, когда его кол-во на складе = 0

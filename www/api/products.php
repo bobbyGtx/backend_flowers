@@ -31,7 +31,6 @@ if ($method === 'OPTIONS') {
     if ($slug === 'best') {
       $result = getBestProducts($link, $result, $reqLanguage);
       if ($result['error']) goto endRequest;
-      
       goto endRequest;
     }//обработчик запроса лучших товаров
     if ($slug === 'recommended') {
@@ -51,7 +50,7 @@ if ($method === 'OPTIONS') {
       if ($result['error']) goto endRequest;
       goto endRequest;
     }//обработчик запроса поиска товара
-    //Получение информации о товаре по ег url
+    //Получение информации о товаре по его url
     $result = getProductInfo($link, $result, $slug, $reqLanguage);
     if ($result["error"]) goto endRequest;
   } else {

@@ -153,6 +153,7 @@ $opErrors['newPasswortNotValid'] ='New password is too simple!';//406
 $opErrors['passwordsNotMatch'] ="Passwords don't match!";//400
 
 $infoMessages['reqSuccess'] = 'Request success!';
+$infoMessages['emailSent'] = 'Email has been sent!';
 $infoMessages['сartRebased'] = 'Cart has been rebased!';
 $infoMessages['recordChanged'] = 'Record changed!';
 $infoMessages['recordDeleted'] = 'Record deleted!';

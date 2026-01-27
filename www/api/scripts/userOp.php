@@ -553,7 +553,6 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
               $messages[] = $result['message']; $result['message']=$oldMessage;
             }else goto endFunc;
           }
-          $newData['emailVerification']=0;
           $newData['email'] = $postDataJson['email'];
         }else $messages[] = 'E-Mail is incorrect';
       } 
