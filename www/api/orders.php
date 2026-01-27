@@ -10,8 +10,8 @@ include_once 'scripts/variables.php';
 include 'scripts/languageOp.php';
 $reqLanguage = languageDetection(getallheaders());//Определение запрашиваемого языка и возврат приставки
 
-function renderOrderEmail(array $order, string $languageTag): array {
-  global $imagesUrl, $frontendAddress,$frontendProductPage;
+function renderOrderEmail(array $order,array $fullProductsList, string $languageTag): array {
+  global $imagesUrl,$productsUrl, $frontendAddress,$frontendProductPage;
   $subject = match ($languageTag) {
     'en' => "[AmoraFlowers] Order confirmation #{$order['id']}",
     'de' => "[AmoraFlowers] Bestellbestätigung Nr. {$order['id']}",
@@ -145,7 +145,7 @@ if ($method === 'OPTIONS') {
 
   //E-Mail confirmation
   $languageTag = array_search($reqLanguage, $language);
-  $emailData = renderOrderEmail($order, $languageTag);
+  $emailData = renderOrderEmail($order, $productsFull, $languageTag);
   $headers  = "MIME-Version: 1.0\r\n";
   $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
   $headers .= "From: AmoraFlowers <noreply@amoraflowers.atwebpages.com>\r\n";

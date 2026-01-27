@@ -3,8 +3,10 @@
  * Обязательные переменные:
  * @var string $languageTag (ru|en|de)
  * @var array $order
+ * @var array $fullProductsList - полный список продуктов с картинками
  * @var string $frontendProductUrl - базовый url страницы продукта с учетом языка
  * @var string $imagesUrl
+ * @var string $productsUrl
  * @var string $logoUrl
  * @var string $frontendAddress
  */
@@ -79,20 +81,36 @@ $t = $translations[$languageTag] ?? $translations['ru'];
         <tr>
           <td>
             <strong><?= $t['products'] ?></strong>
-            <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;">
-              <?php foreach ($order['items'] as $item): ?>
-                <tr>
-                  <td>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              <?php $i = 0; ?>
+              <?php foreach ($fullProductsList as $item): ?>
+                <tr style="background-color: <?= $i++ % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px;">
+                  <td style="width: 85px;">
+                      <div style="max-width: 75px; min-width: 65px; aspect-ratio: 1; padding: 5px; display:flex;">
+                          <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank" style="cursor: pointer;">
+                            <img src="<?= htmlspecialchars($productsUrl.$item['image']) ?>"
+                            alt="<?= htmlspecialchars($item['name']) ?>" style="
+                                 width: 100%; height: 100%;
+                                 border-radius: 4px;
+                                 overflow: hidden;
+                                 object-fit: cover;">
+                          </a>
+                      </div>
+                  </td>
+
+                  <td style="width: auto;">
                       <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank"
                       style="
                         text-decoration:none;
                         color: #456F49;
                         cursor: pointer;
+                        white-space: wrap;
+                        padding: 0 5px;
                         ">
                         <?= htmlspecialchars($item['name']) ?>
                       </a>
                   </td>
-                  <td align="right">
+                  <td style="text-align: center; width: 74px">
                     <?= $item['quantity'] ?> × <?= $item['price'] ?> €
                   </td>
                 </tr>
