@@ -82,11 +82,10 @@ $t = $translations[$languageTag] ?? $translations['ru'];
           <td>
             <strong><?= $t['products'] ?></strong>
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-              <?php $i = 0; ?>
-              <?php foreach ($fullProductsList as $item): ?>
-                <tr style="background-color: <?= $i++ % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px;">
-                  <td style="width: 85px;">
-                      <div style="max-width: 75px; min-width: 65px; aspect-ratio: 1; padding: 5px; display:flex;">
+              <?php foreach ($fullProductsList as $index=>$item): ?>
+                <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>;">
+                  <td rowspan="2" style="width: 85px; border-top-left-radius: 5px; border-bottom-left-radius: 5px; overflow:hidden;">
+                      <div style="width: 75px; height: 75px; padding: 5px 10px 5px 5px; display:flex;">
                           <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank" style="cursor: pointer;">
                             <img src="<?= htmlspecialchars($productsUrl.$item['image']) ?>"
                             alt="<?= htmlspecialchars($item['name']) ?>" style="
@@ -97,23 +96,26 @@ $t = $translations[$languageTag] ?? $translations['ru'];
                           </a>
                       </div>
                   </td>
-
-                  <td style="width: auto;">
+                  <td style="width: auto; vertical-align: middle; padding-top: 22px;border-top-right-radius: 5px;">
                       <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank"
                       style="
                         text-decoration:none;
                         color: #456F49;
                         cursor: pointer;
                         white-space: wrap;
-                        padding: 0 5px;
+                        padding-right: 10px;
                         ">
                         <?= htmlspecialchars($item['name']) ?>
                       </a>
                   </td>
-                  <td style="text-align: center; width: 74px">
-                    <?= $item['quantity'] ?> × <?= $item['price'] ?> €
-                  </td>
                 </tr>
+              <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px; height: 20px">
+                  <td style="text-align: right; vertical-align: center; width: auto; border-bottom-right-radius: 5px;">
+                    <div style="padding: 0 15px 2px 15px ;text-align: right;">
+                      <?= $item['quantity'] ?> × <?= $item['price'] ?> €
+                    </div>
+                  </td>
+              </tr>
               <?php endforeach; ?>
             </table>
           </td>
