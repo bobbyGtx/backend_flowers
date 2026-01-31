@@ -274,6 +274,64 @@ function getProductInfo($link, $result, $productUrl, $languageTag=''){
   return $result;
 }//Получение информации об одном товаре
 
+/**
+ * @param mysqli $link
+ * @param array $result
+ * @param array<int> $productIds
+ * @param string $languageTag
+ * @return array $result + array ['products']
+ */
+function getProductsInfo(mysqli $link, array $result, array $productIds,string $languageTag=''):array{
+  include 'variables.php';
+  $funcName = 'getProductsInfo_func';
+  if (empty($result) || $result['error']){goto endFunc;}
+  if (!$link) {$result['error']=true; $result['code']=500; $result['message'] = $errors['dbConnectInterrupt'] . "($funcName)"; goto endFunc;}
+  if (count($productIds)<1){$result['error']=true; $result['code']=500; $result['message'] = $errors['productIdsNotFound'] . "($funcName)"; goto endFunc;}
+
+  $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+  $types = str_repeat('i', count($productIds));//указываем типы, везде i в этом случае
+
+  $sql = "SELECT
+    id,
+    name$languageTag AS name,
+    price,
+    image,
+    url,
+    count,
+    disabled
+    FROM products
+    WHERE id IN ($placeholders)";
+
+  try {
+    $stmt = $link->prepare($sql);
+    if (!$stmt) {throw new Exception($link->error);}
+    $stmt->bind_param($types, ...$productIds);
+    $stmt->execute();
+    $response = $stmt->get_result();
+    $numRows = $response->num_rows;
+    $stmt->close();
+  } catch (Exception $e) {$emessage = $e->getMessage();$result['error'] = true;$result['code'] = 500;$result['message'] = $errors['selReqRejected'] . "($funcName)($emessage))";goto endFunc;}
+
+  if ($numRows==0){
+    $result['error']=true;$result['message']=$infoErrors['cartClearedBySystem'];
+    $result['products'] = [];
+    goto endFunc;
+  }//Ошибка с кодом 200
+  if ($numRows !== count($productIds)){
+    $result['error'] = true;$result['message'] = $infoErrors['someProductsRemoved'];
+  }//Ошибка с кодом 200 с продолжением функции
+
+  $items = $response->fetch_all(MYSQLI_ASSOC);
+  $result['products'] = $items;
+
+  endFunc:
+  return $result;
+
+  /**
+   * Errors
+   * code 200 - Cart has been cleared by the system. Unrecognized products were removed.
+   */
+}//Получение короткой информации о нескольких товаров (для офлайн корзины)
 function searchProducts($link, $result, $searchStr, $languageTag=''){
   include 'variables.php';
   $funcName = 'searchProducts_func';

@@ -76,6 +76,7 @@ $errors['userIdNotFound'] = 'User ID not found in function! ';//500
 $critErr['productUrlNotFound'] ='Product URL not found in function! ';//500
 $errors['orderIdNotFound'] = 'Order ID not found in function! ';
 $errors['productIdNotFound'] = 'Product ID not found in function! ';
+$errors['productIdsNotFound'] = 'Product list is empty in function! ';//500
 $errors['quantityNotFound'] = 'Quantity not found in function! ';
 $errors['outputtingFuncError'] = 'Error in outputting a variable from a function! ';
 

@@ -80,8 +80,8 @@ $t = $translations[$languageTag] ?? $translations['ru'];
 
         <tr>
           <td>
-            <strong><?= $t['products'] ?></strong>
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+            <strong style="margin-bottom: 4px;"><?= $t['products'] ?></strong>
+            <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%;">
               <?php foreach ($fullProductsList as $index=>$item): ?>
                 <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>;">
                   <td rowspan="2" style="width: 85px; border-top-left-radius: 5px; border-bottom-left-radius: 5px; overflow:hidden;">
@@ -109,7 +109,7 @@ $t = $translations[$languageTag] ?? $translations['ru'];
                       </a>
                   </td>
                 </tr>
-              <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px; height: 20px">
+              <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px; height: 20px;">
                   <td style="text-align: right; vertical-align: center; width: auto; border-bottom-right-radius: 5px;">
                     <div style="padding: 0 15px 2px 15px ;text-align: right;">
                       <?= $item['quantity'] ?> × <?= $item['price'] ?> €
