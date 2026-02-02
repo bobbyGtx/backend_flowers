@@ -553,7 +553,6 @@ function prepareNewData($result, $link, $postDataJson, $userEml, $userPwd, $key)
               $messages[] = $result['message']; $result['message']=$oldMessage;
             }else goto endFunc;
           }
-          $newData['emailVerification']=0;
           $newData['email'] = $postDataJson['email'];
         }else $messages[] = 'E-Mail is incorrect';
       } 
@@ -727,7 +726,7 @@ function createUserOpRecord($result, $link, int $userId,UserOpTypes $operationTy
   return $result;
 }
 function sendOpEmail($result,string $userEmail,string $token,UserOpTypes $operation,string $languageTag){
-  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $frontendAddress, $authError,$emailTemplatesDir, $productionMode, $passResetUrl, $language, $confirmationScriptURL, $passChangeUrl, $critErr;
+  global $emailRegEx, $opTokenRegEx, $errors, $opErrors, $imagesUrl, $frontendAddress, $authError,$emailTemplatesDir, $productionMode, $passResetPage, $language, $confirmationScriptURL, $passChangePage, $critErr, $projectUrl;
   include_once 'enums.php';
   $funcName = "sendOpEmail_func operation:($operation->name)";
   if ($result['error']) goto endFunc;
@@ -761,14 +760,14 @@ function sendOpEmail($result,string $userEmail,string $token,UserOpTypes $operat
       default => '[AmoraFlowers] Подтверждение нового email адреса',
     };
     $actionURL = "{$confirmationScriptURL}?{$urlParamName}={$token}&lng={$languageTag}";
-    $passChangeLink = $passChangeUrl;//Перенос переменной из настроек для доступности
+    $passChangeLink = "{$projectUrl}/{$languageTag}/{$passChangePage}";
   }elseif ($operation===UserOpTypes::resetPass){
     $mailSubject = match ($languageTag) {
       'en' => '[AmoraFlowers] Reset user password',
       'de' => '[AmoraFlowers] Benutzerpasswort zurücksetzen',
       default => '[AmoraFlowers] Сброс пароля пользователя',
     };
-    $actionURL = "{$passResetUrl}?{$urlParamName}={$token}&lng={$languageTag}";
+    $actionURL = "{$frontendAddress}/{$languageTag}/{$passResetPage}?{$urlParamName}={$token}";
   }else{
     $result['error'] = true;$result['code'] = 500;$result['message'] = $critErr['UserOpNotFound']." ({$funcName})";goto endFunc;
   }

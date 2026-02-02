@@ -26,7 +26,7 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
     }
   }
 
-  $sql = "SELECT `id`,`name$languageTag` as `name`,`price`,`count`,`image`,`url`,`disabled` FROM `products` WHERE $sqlStr;";
+  $sql = "SELECT `id`,`name`,`name_en`,`name_de`,`price`,`count`,`image`,`url`,`disabled` FROM `products` WHERE $sqlStr;";
   //$result['sql']=$sql;
 
   try {
@@ -67,18 +67,18 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
     $quantityInStock = intval($product['count']);//доступно на складе
     if (($quantityInStock - $quantity) < 0) {
       $result['error'] = true;
-      $messages[] = "Not enough product in stock. (". $product['name'].")";
+      $messages[] = "Not enough product in stock. (". $product["name{$languageTag}"].")";
     }
     if ($product['disabled']) {
       $result['error'] = true;
-      $messages[] = "Product from cart is not available. (". $product['name'] . ")" ;
+      $messages[] = "Product from cart is not available. (". $product["name{$languageTag}"] . ")" ;
     }
     $updatesProducts[intval($product['id'])] = ($quantityInStock - $quantity);//подготавливаем массив для изменения кол-ва товара на складе и возвращаем его
     $totalProductPrice = $quantity * intval($product['price']);
     $productsPrice += $totalProductPrice;
     $item = ['id' => $product['id'], 'name' => $product['name'], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
-    $products[] = ['id' => $product['id'], 'name' => $product['name'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price']];
-    $productsFull[]=['id' => $product['id'], 'name' => $product['name'], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];
+    $products[] = ['id' => $product['id'], 'name' => $product['name'], 'name_en' => $product['name_en'], 'name_de' => $product['name_de'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price']];//Список для добавления в базу
+    $productsFull[]=['id' => $product['id'], 'name' => $product["name{$languageTag}"], 'image' => $product['image'],'url' => $product['url'],'quantity' => $quantities[$product['id']], 'price' => $product['price'], 'total' => $totalProductPrice];//Список для Email с картинками
   }
 
   if ($result['error'] && count($messages) > 0) {
@@ -90,7 +90,7 @@ function cartToOrder($link, $result, $userCartItems, $userId, $languageTag = '')
   endFunc:
   return $result;
 }
-//Перенести в продуктс ОП если он будет
+//Перенести в продукт с ОП если он будет
 function updateProductsCounts($link, $result, $updatesProducts)
 {
   //Функция автоматом дизейблит товар, когда его кол-во на складе = 0
@@ -288,7 +288,14 @@ function getOrder($link, $result, $orderId, $languageTag = ''){
   $order['status_id'] = $row['status_id'];
   $order['statusName'] = $row['statusName'];
   $order['class'] = $row['class'];
-  $order['items'] = json_decode($row['items']);
+  $order['items'] = json_decode($row['items'],true);
+  foreach ($order['items'] as &$item) {
+    if (isset($item["name{$languageTag}"])) {
+      $itemName = $item["name{$languageTag}"];
+      unset($item["name_en"], $item["name_de"]);
+      $item['name'] = $itemName;
+    }
+  }
 
   if (!empty($row['createdAt'])){
     $date = new DateTime("@{$row['createdAt']}");
@@ -412,7 +419,14 @@ function getOrders($link, $result, $userId, $reqLanguage) {
         $order['updatedAt'] = $date->format("d.m.Y H:i");
       }
 
-      $order['items'] = json_decode($order['items']);
+      $order['items'] = json_decode($order['items'],true);
+      foreach ($order['items'] as &$item) {
+        if (isset($item["name{$reqLanguage}"])) {
+          $itemName = $item["name{$reqLanguage}"];
+          unset($item["name_en"], $item["name_de"]);
+          $item['name'] = $itemName;
+        }
+      }
     }
     
     $result['orders'] = $orders;

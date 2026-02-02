@@ -3,8 +3,10 @@
  * Обязательные переменные:
  * @var string $languageTag (ru|en|de)
  * @var array $order
- * @var string $frontendProductUrl
+ * @var array $fullProductsList - полный список продуктов с картинками
+ * @var string $frontendProductUrl - базовый url страницы продукта с учетом языка
  * @var string $imagesUrl
+ * @var string $productsUrl
  * @var string $logoUrl
  * @var string $frontendAddress
  */
@@ -27,7 +29,7 @@ $t = $translations[$languageTag] ?? $translations['ru'];
           <!-- HEADER -->
           <tr>
               <td align="center" style="padding:30px 20px;">
-                  <a href="<?= htmlspecialchars($frontendAddress) ?>" target="_blank" style="cursor:pointer;">
+                  <a href="<?= htmlspecialchars($frontendAddress.'/'.$languageTag) ?>" target="_blank" style="cursor:pointer;">
                   <img
                           src="<?= htmlspecialchars($logoUrl) ?>"
                           alt="<?= htmlspecialchars($t['logo_alt']) ?>"
@@ -78,25 +80,42 @@ $t = $translations[$languageTag] ?? $translations['ru'];
 
         <tr>
           <td>
-            <strong><?= $t['products'] ?></strong>
-            <table width="100%" cellpadding="5" cellspacing="0" style="border-collapse:collapse;">
-              <?php foreach ($order['items'] as $item): ?>
-                <tr>
-
-                  <td>
-                      <a href="<?= htmlspecialchars($frontendProductUrl . $item->url)?>" target="_blank"
+            <strong style="margin-bottom: 4px;"><?= $t['products'] ?></strong>
+            <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%;">
+              <?php foreach ($fullProductsList as $index=>$item): ?>
+                <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>;">
+                  <td rowspan="2" style="width: 85px; border-top-left-radius: 5px; border-bottom-left-radius: 5px; overflow:hidden;">
+                      <div style="width: 75px; height: 75px; padding: 5px 10px 5px 5px; display:flex;">
+                          <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank" style="cursor: pointer;">
+                            <img src="<?= htmlspecialchars($productsUrl.$item['image']) ?>"
+                            alt="<?= htmlspecialchars($item['name']) ?>" style="
+                                 width: 100%; height: 100%;
+                                 border-radius: 4px;
+                                 overflow: hidden;
+                                 object-fit: cover;">
+                          </a>
+                      </div>
+                  </td>
+                  <td style="width: auto; vertical-align: middle; padding-top: 22px;border-top-right-radius: 5px;">
+                      <a href="<?= htmlspecialchars($frontendProductUrl. $item['url'])?>" target="_blank"
                       style="
                         text-decoration:none;
                         color: #456F49;
                         cursor: pointer;
+                        white-space: wrap;
+                        padding-right: 10px;
                         ">
-                        <?= htmlspecialchars($item->name) ?>
+                        <?= htmlspecialchars($item['name']) ?>
                       </a>
                   </td>
-                  <td align="right">
-                    <?= $item->quantity ?> × <?= $item->price ?> €
-                  </td>
                 </tr>
+              <tr style="background-color: <?= $index % 2 ? '#a4cba3' : '#6CAC7280' ?>; border-radius: 4px; height: 20px;">
+                  <td style="text-align: right; vertical-align: center; width: auto; border-bottom-right-radius: 5px;">
+                    <div style="padding: 0 15px 2px 15px ;text-align: right;">
+                      <?= $item['quantity'] ?> × <?= $item['price'] ?> €
+                    </div>
+                  </td>
+              </tr>
               <?php endforeach; ?>
             </table>
           </td>

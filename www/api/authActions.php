@@ -3,16 +3,17 @@ header("Access-Control-Allow-Origin: * ");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: OPTIONS, PATCH, GET");
 header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Language");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, X-Access-Token, X-Language");
 
 /**
  * Обязательные входящие данные в теле запроса:
  * @var UserOpTypes $operation (verifyEmail|resetPass|)//changeEmail not work
  * @var string      $email
  *  Errors
- *  400 - E-Mail not recognized!,E-mail not found in DB!,Email address already confirmed!
+ *  400 - E-Mail not recognized!,E-mail not found in DB!,
  *  403 - User blocked!
  *  406 - Email not valid!
+ *  409 - Email address already confirmed!
  *  429 - Добавляется переменная $result['timer']
  *      - Reset password request limit exceeded!
  *      - Email verification request limit exceeded!
@@ -30,7 +31,7 @@ if ($method === 'OPTIONS') {
   http_response_code(200);return;
 } elseif ($method === 'POST') {
   include 'scripts/connectDB.php';//Подключение к БД и настройки + модуль шифрования
-  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['reqSuccess']];//Создание массива с ответом Ок
+  $result = ['error' => false, 'code' => 200, 'message' => $infoMessages['emailSent']];//Создание массива с ответом Ок
   $postData = json_decode(file_get_contents('php://input'), true);//парсинг параметров запроса
   if (isset($postData['operation'])) $operation = UserOpTypes::tryFrom($postData['operation']);
   if (!isset($operation)) {$result['error']=true; $result['code'] = 500; $result['message'] = $errors['unknownOperationType']; goto endRequest;}
@@ -53,7 +54,7 @@ if ($method === 'OPTIONS') {
   if ($userBlocked===1){$result['error'] = true;$result['code'] = 403;$result['message'] = $infoMessages['userBlocked'];goto endRequest;}
 
   if ($operation === UserOpTypes::verifyEmail && $emailVerification!==0){
-    $result['error']=true; $result['code'] = 400; $result['message'] = $errors['emailAlreadyConfirmed']; goto endRequest;
+    $result['error']=true; $result['code'] = 409; $result['message'] = $errors['emailAlreadyConfirmed']; goto endRequest;
   }
 
   $result = createUserOpRecord($result,$link, $userId, $operation);
